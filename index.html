@@ -11,23 +11,11 @@
   <style>
     body { font-family: 'Inter', system-ui, sans-serif; }
     .glass { background: rgba(30, 41, 59, 0.65); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
-    .note-pill { 
-      transition: all 0.22s ease; 
-      font-variant-numeric: tabular-nums;
-    }
-    .note-pill.highlight { 
-      transform: scale(1.18); 
-      background-color: #10b981 !important; 
-      color: white; 
-      box-shadow: 0 10px 25px -5px rgba(16,185,129,0.5); 
-    }
-    .note-pill.current { 
-      background-color: #eab308; 
-      color: black; 
-      box-shadow: 0 0 0 3px rgba(234,179,8,0.4); 
-    }
+    .note-pill { transition: all 0.22s ease; font-variant-numeric: tabular-nums; }
+    .note-pill.highlight { transform: scale(1.18); background-color: #10b981 !important; color: white; box-shadow: 0 10px 25px -5px rgba(16,185,129,0.5); }
+    .note-pill.current { background-color: #eab308; color: black; box-shadow: 0 0 0 3px rgba(234,179,8,0.4); }
     .note-pill.correct { background-color: #10b981; color: white; }
-    .note-pill.wrong { background-color: #ef4444; color: white; }
+    .note-pill.wrong   { background-color: #ef4444; color: white; }
     canvas { image-rendering: pixelated; }
   </style>
 </head>
@@ -43,7 +31,7 @@
         </h1>
         <p class="mt-2 text-slate-400 text-lg">Scales • Arpeggios • Broken Chords • ABRSM 2022–2026</p>
       </div>
-      <div class="text-sm text-slate-500">v2.3 • Real bassoon + microphone required</div>
+      <div class="text-sm text-slate-500">v2.4 • Real bassoon + microphone required</div>
     </header>
 
     <!-- Grade Tabs -->
@@ -65,7 +53,7 @@
       <!-- Sidebar -->
       <aside class="lg:col-span-4 space-y-6">
 
-        <!-- Mode Selector -->
+        <!-- Exercise Type -->
         <div class="glass rounded-2xl p-5 shadow-xl shadow-black/30">
           <h3 class="text-lg font-semibold mb-4 text-slate-300">Exercise Type</h3>
           <div class="grid grid-cols-3 gap-2">
@@ -85,18 +73,18 @@
       <!-- Main Content -->
       <main class="lg:col-span-8 space-y-6">
 
-        <!-- Selected Exercise + Tempo + Practice/Performance -->
+        <!-- Controls Bar -->
         <div class="glass rounded-2xl p-6 shadow-xl shadow-black/30">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
             <div>
               <h2 id="selected-title" class="text-2xl sm:text-3xl font-bold text-white">Select an exercise</h2>
               <p id="selected-desc" class="mt-1 text-slate-400"></p>
             </div>
-            <button onclick="toggleSession()" id="btn-session" 
-              class="inline-flex items-center gap-2 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-semibold rounded-xl shadow-lg shadow-emerald-900/30 transition-all disabled:opacity-50 disabled:pointer-events-none">
-              <svg id="session-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /></svg>
-              <span id="session-text">Start</span>
-            </button>
+
+            <!-- Mode-dependent button -->
+            <div id="mode-dependent-btn" class="hidden sm:block">
+              <!-- Filled dynamically -->
+            </div>
           </div>
 
           <!-- Tempo -->
@@ -106,17 +94,19 @@
                    class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500">
           </div>
 
-          <!-- Practice / Performance Toggle -->
+          <!-- Mode Toggle -->
           <div class="mt-6 flex bg-slate-800 rounded-xl p-1 text-sm">
-            <button onclick="setPracticeMode(true)" id="practice-btn"
+            <button onclick="setLearningMode('learning')" id="learning-btn"
+              class="flex-1 py-3 rounded-lg font-medium transition-all data-[active=true]:bg-emerald-600 data-[active=true]:text-white">Learning Mode</button>
+            <button onclick="setLearningMode('practice')" id="practice-btn"
               class="flex-1 py-3 rounded-lg font-medium transition-all data-[active=true]:bg-emerald-600 data-[active=true]:text-white">Practice Mode</button>
-            <button onclick="setPracticeMode(false)" id="performance-btn"
+            <button onclick="setLearningMode('performance')" id="performance-btn"
               class="flex-1 py-3 rounded-lg font-medium transition-all data-[active=true]:bg-emerald-600 data-[active=true]:text-white">Performance Mode</button>
           </div>
         </div>
 
-        <!-- Live Feedback -->
-        <div class="glass rounded-2xl p-5 shadow-xl shadow-black/30">
+        <!-- Live Feedback (only in Practice & Performance) -->
+        <div id="live-feedback" class="glass rounded-2xl p-5 shadow-xl shadow-black/30 hidden">
           <div class="flex items-center gap-8 justify-center">
             <div class="text-center">
               <div class="text-xs text-emerald-400 tracking-widest">EXPECTED</div>
@@ -148,21 +138,21 @@
 
           <div class="grid sm:grid-cols-2 gap-4">
             <button onclick="startListening()" id="btn-listen" 
-              class="inline-flex items-center justify-center gap-2 px-8 py-5 bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-semibold rounded-xl shadow-lg shadow-orange-900/30 transition-all">
+              class="inline-flex items-center justify-center gap-2 px-8 py-5 bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-semibold rounded-xl shadow-lg shadow-orange-900/30 transition-all hidden">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
               Start Mic
             </button>
             <button onclick="stopAndAnalyze()" id="btn-analyze" 
               class="hidden inline-flex items-center justify-center gap-2 px-8 py-5 bg-slate-700 hover:bg-slate-600 active:bg-slate-800 text-white font-semibold rounded-xl shadow-lg transition-all">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
-              Stop &amp; Final Check
+              Stop & Final Check
             </button>
           </div>
         </div>
 
         <!-- Results -->
         <div id="results-area" class="hidden glass rounded-2xl p-6 shadow-xl shadow-black/30 space-y-6">
-          <h3 class="text-xl font-semibold text-emerald-400">Final Performance</h3>
+          <h3 class="text-xl font-semibold text-emerald-400">Your Performance</h3>
           <div id="results-rows" class="space-y-4 max-h-96 overflow-y-auto"></div>
           <div class="text-center pt-4">
             <div id="score-display" class="text-6xl font-bold text-emerald-400">—%</div>
@@ -194,7 +184,7 @@
     let lastNote     = null;
 
     let currentTempo = 72;
-    let isPracticeMode = true;     // default = Practice Mode
+    let learningMode = 'learning'; // 'learning' | 'practice' | 'performance'
     let sessionRunning = false;
     let tempoTimer = null;
 
@@ -207,11 +197,11 @@
         { name: "F Major arpeggio / broken chord", root: "F2", type: "major", octaves: 1,
           notes: ["F2","A2","C3","F3","C3","A2","F2"] }
       ]
-      // Grades 2–8 can be added later
+      // add more grades as needed
     };
 
     // ──────────────────────────────────────────────
-    // MUSIC HELPERS (fixed for correct flats)
+    // MUSIC HELPERS
     // ──────────────────────────────────────────────
     const NOTES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 
@@ -242,7 +232,7 @@
     }
 
     // ──────────────────────────────────────────────
-    // UI LOGIC
+    // UI & MODE LOGIC
     // ──────────────────────────────────────────────
     function selectGrade(g) {
       currentGrade = g;
@@ -263,6 +253,49 @@
       currentItem = null;
       document.getElementById('selected-title').textContent = 'Select an exercise';
       document.getElementById('notes-container').innerHTML = '';
+      updateModeUI();
+    }
+
+    function setLearningMode(mode) {
+      learningMode = mode;
+      document.getElementById('learning-btn').dataset.active = (mode === 'learning');
+      document.getElementById('practice-btn').dataset.active = (mode === 'practice');
+      document.getElementById('performance-btn').dataset.active = (mode === 'performance');
+      updateModeUI();
+    }
+
+    function updateModeUI() {
+      const isLearning = learningMode === 'learning';
+
+      // Show/hide mic controls
+      document.getElementById('btn-listen').classList.toggle('hidden', isLearning);
+      document.getElementById('btn-analyze').classList.toggle('hidden', isLearning);
+      document.getElementById('live-feedback').classList.toggle('hidden', isLearning);
+
+      // Show correct button
+      const container = document.getElementById('mode-dependent-btn');
+      container.innerHTML = '';
+      if (isLearning) {
+        const btn = document.createElement('button');
+        btn.onclick = playSequence;
+        btn.id = 'btn-play';
+        btn.className = 'inline-flex items-center gap-2 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-semibold rounded-xl shadow-lg shadow-emerald-900/30 transition-all disabled:opacity-50 disabled:pointer-events-none';
+        btn.innerHTML = `
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /></svg>
+          Play
+        `;
+        container.appendChild(btn);
+      } else {
+        const btn = document.createElement('button');
+        btn.onclick = toggleSession;
+        btn.id = 'btn-session';
+        btn.className = 'inline-flex items-center gap-2 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-semibold rounded-xl shadow-lg shadow-emerald-900/30 transition-all disabled:opacity-50 disabled:pointer-events-none';
+        btn.innerHTML = `
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /></svg>
+          <span>Start</span>
+        `;
+        container.appendChild(btn);
+      }
     }
 
     function renderItems() {
@@ -299,43 +332,70 @@
 
       document.getElementById('results-area').classList.add('hidden');
       updateLiveExpected();
+      updateModeUI();
     }
 
     // ──────────────────────────────────────────────
-    // PRACTICE / PERFORMANCE MODE
+    // LEARNING MODE PLAYBACK (tempo-aware demo)
     // ──────────────────────────────────────────────
-    function setPracticeMode(practice) {
-      isPracticeMode = practice;
-      document.getElementById('practice-btn').dataset.active = practice;
-      document.getElementById('performance-btn').dataset.active = !practice;
-    }
+    async function playSequence() {
+      if (!currentItem || isPlaying || learningMode !== 'learning') return;
+      await initAudio();
+      isPlaying = true;
+      document.getElementById('btn-play').disabled = true;
 
-    // ──────────────────────────────────────────────
-    // SESSION CONTROL (Start / Pause)
-    // ──────────────────────────────────────────────
-    function toggleSession() {
-      if (!currentItem) return alert("Select an exercise first");
-      if (!sessionRunning) {
-        startSession();
-      } else {
-        pauseSession();
+      const pills = document.querySelectorAll('#notes-container > div');
+      const msPerBeat = 60000 / currentTempo;
+      const noteDuration = msPerBeat * 0.85;
+
+      for (let i = 0; i < sequence.length; i++) {
+        if (!isPlaying) break;
+        pills.forEach((p, idx) => p.classList.toggle('highlight', idx === i));
+
+        const midi = noteToMidi(sequence[i]);
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const filt = audioCtx.createBiquadFilter();
+
+        osc.type = 'sawtooth';
+        filt.type = 'lowpass';
+        filt.frequency.value = 800;
+        osc.frequency.value = midiToFreq(midi);
+        gain.gain.value = 0.28;
+
+        osc.connect(filt).connect(gain).connect(audioCtx.destination);
+        osc.start();
+
+        setTimeout(() => {
+          gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.08);
+          osc.stop(audioCtx.currentTime + 0.12);
+        }, noteDuration);
+
+        await new Promise(r => setTimeout(r, msPerBeat));
       }
+
+      pills.forEach(p => p.classList.remove('highlight'));
+      isPlaying = false;
+      document.getElementById('btn-play').disabled = false;
     }
 
+    // ──────────────────────────────────────────────
+    // PRACTICE & PERFORMANCE SESSION LOGIC (unchanged from previous)
+    // ──────────────────────────────────────────────
     async function startSession() {
       await initAudio();
       sessionRunning = true;
       currentIndex = 0;
       detected = [];
-      document.getElementById('btn-session').innerHTML = `
+      const btn = document.getElementById('btn-session');
+      btn.innerHTML = `
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M10 9v2m4-2v2m7-5a9 9 0 01-9 9 9 9 0 01-9-9 9 9 0 019-9 9 9 0 019 9z" /></svg>
         <span>Pause</span>`;
-      document.getElementById('btn-listen').classList.add('hidden');
-      document.getElementById('btn-analyze').classList.remove('hidden');
+      document.getElementById('btn-listen').classList.remove('hidden');
 
       startListening();
 
-      if (!isPracticeMode) {
+      if (learningMode === 'performance') {
         startTempoTimer();
       }
       updateLiveExpected();
@@ -344,18 +404,22 @@
     function pauseSession() {
       sessionRunning = false;
       if (tempoTimer) clearTimeout(tempoTimer);
-      document.getElementById('btn-session').innerHTML = `
+      const btn = document.getElementById('btn-session');
+      btn.innerHTML = `
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /></svg>
         <span>Resume</span>`;
     }
 
-    // ──────────────────────────────────────────────
-    // TEMPO TIMER (only used in Performance Mode)
-    // ──────────────────────────────────────────────
+    function toggleSession() {
+      if (!currentItem) return alert("Select an exercise first");
+      if (!sessionRunning) startSession();
+      else pauseSession();
+    }
+
     function startTempoTimer() {
       const msPerBeat = 60000 / currentTempo;
       tempoTimer = setTimeout(() => {
-        if (!sessionRunning || isPracticeMode) return;
+        if (!sessionRunning || learningMode !== 'performance') return;
         currentIndex = Math.min(currentIndex + 1, sequence.length - 1);
         updateLiveExpected();
         if (currentIndex < sequence.length - 1) startTempoTimer();
@@ -363,14 +427,9 @@
       }, msPerBeat);
     }
 
-    // ──────────────────────────────────────────────
-    // LIVE FEEDBACK
-    // ──────────────────────────────────────────────
     function updateLiveExpected() {
-      const expectedEl = document.getElementById('expected-live');
-      expectedEl.textContent = sequence[currentIndex] || '—';
+      document.getElementById('expected-live').textContent = sequence[currentIndex] || '—';
 
-      // Highlight current note in list
       document.querySelectorAll('.note-pill').forEach(p => {
         p.classList.remove('current');
         if (parseInt(p.dataset.index) === currentIndex) p.classList.add('current');
@@ -379,14 +438,9 @@
 
     function markNote(index, correct) {
       const pill = document.querySelector(`.note-pill[data-index="${index}"]`);
-      if (pill) {
-        pill.classList.add(correct ? 'correct' : 'wrong');
-      }
+      if (pill) pill.classList.add(correct ? 'correct' : 'wrong');
     }
 
-    // ──────────────────────────────────────────────
-    // LISTENING LOOP (real-time practice & performance)
-    // ──────────────────────────────────────────────
     async function startListening() {
       await initAudio();
       try {
@@ -418,20 +472,18 @@
           const expected = sequence[currentIndex];
           const isCorrect = note === expected;
 
-          // Live feedback
           document.getElementById('you-played-live').style.color = isCorrect ? '#10b981' : '#ef4444';
 
-          // Record for final score
           if (detected.length <= currentIndex) detected[currentIndex] = note;
 
           if (isCorrect) {
             markNote(currentIndex, true);
-            if (isPracticeMode) {
+            if (learningMode === 'practice') {
               currentIndex = Math.min(currentIndex + 1, sequence.length - 1);
               updateLiveExpected();
-              if (currentIndex === sequence.length - 1) stopSession();
+              if (currentIndex >= sequence.length - 1) stopSession();
             }
-          } else if (!isPracticeMode) {
+          } else if (learningMode === 'performance') {
             markNote(currentIndex, false);
           }
         } else if (note !== lastNote) {
@@ -452,20 +504,37 @@
       if (tempoTimer) clearTimeout(tempoTimer);
       if (stream) stream.getTracks().forEach(t => t.stop());
       sessionRunning = false;
-      document.getElementById('btn-session').innerHTML = `
+      const btn = document.getElementById('btn-session');
+      btn.innerHTML = `
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /></svg>
         <span>Start Again</span>`;
     }
 
-    // ──────────────────────────────────────────────
-    // REMAINING FUNCTIONS (unchanged from previous version)
-    // ──────────────────────────────────────────────
-    function initAudio() {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function stopAndAnalyze() {
+      stopSession();
+      const rows = document.getElementById('results-rows');
+      rows.innerHTML = '';
+      let correct = 0;
+      sequence.forEach((exp, i) => {
+        const got = detected[i] || '—';
+        const match = got === exp;
+        if (match) correct++;
+        const row = document.createElement('div');
+        row.className = 'flex justify-between items-center bg-slate-900/50 px-5 py-3.5 rounded-xl';
+        row.innerHTML = `
+          <div class="flex-1"><div class="text-emerald-400 text-xs">EXPECTED</div><div class="text-lg font-medium">${exp}</div></div>
+          <div class="text-center flex-1"><div class="text-orange-400 text-xs">YOU PLAYED</div><div class="text-lg font-medium ${match ? 'text-emerald-400' : 'text-red-400'}">${got}</div></div>
+          <div class="text-2xl">${match ? '✅' : '❌'}</div>`;
+        rows.appendChild(row);
+      });
+      const pct = sequence.length ? Math.round(correct / sequence.length * 100) : 0;
+      document.getElementById('score-display').textContent = `${pct}%`;
+      document.getElementById('results-area').classList.remove('hidden');
     }
 
-    async function playSequence() { /* legacy - not used now */ }
-
+    // ──────────────────────────────────────────────
+    // PITCH VISUAL & AUTO-CORRELATE (unchanged)
+    // ──────────────────────────────────────────────
     let canvas, ctx;
     function setupCanvas() {
       canvas = document.getElementById('pitch-canvas');
@@ -509,29 +578,6 @@
       return -1;
     }
 
-    function stopAndAnalyze() {
-      stopSession();
-      // Final detailed report (same as before)
-      const rows = document.getElementById('results-rows');
-      rows.innerHTML = '';
-      let correct = 0;
-      sequence.forEach((exp, i) => {
-        const got = detected[i] || '—';
-        const match = got === exp;
-        if (match) correct++;
-        const row = document.createElement('div');
-        row.className = 'flex justify-between items-center bg-slate-900/50 px-5 py-3.5 rounded-xl';
-        row.innerHTML = `
-          <div class="flex-1"><div class="text-emerald-400 text-xs">EXPECTED</div><div class="text-lg font-medium">${exp}</div></div>
-          <div class="text-center flex-1"><div class="text-orange-400 text-xs">YOU PLAYED</div><div class="text-lg font-medium ${match ? 'text-emerald-400' : 'text-red-400'}">${got}</div></div>
-          <div class="text-2xl">${match ? '✅' : '❌'}</div>`;
-        rows.appendChild(row);
-      });
-      const pct = sequence.length ? Math.round(correct / sequence.length * 100) : 0;
-      document.getElementById('score-display').textContent = `${pct}%`;
-      document.getElementById('results-area').classList.remove('hidden');
-    }
-
     // ──────────────────────────────────────────────
     // INIT
     // ──────────────────────────────────────────────
@@ -540,7 +586,7 @@
       selectGrade(1);
       setMode('scale');
       renderItems();
-      setPracticeMode(true);   // default to Practice Mode
+      setLearningMode('learning');  // default to Learning mode
 
       setTimeout(() => {
         const first = itemsByGrade[1]?.[0];
