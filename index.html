@@ -138,7 +138,7 @@
           </div>
 
           <div class="grid sm:grid-cols-2 gap-4">
-            <button id="btn-listen" onclick="startListening()" class="inline-flex items-center justify-center gap-2 px-8 py-5 bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-semibold rounded-xl shadow-lg shadow-orange-900/30 transition-all">
+            <button id="btn-listen" onclick="startListening()" class="inline-flex items-center justify-center gap-2 px-8 py-5 bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-semibold rounded-xl shadow-lg shadow-orange-900/30 transition-all hidden">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
               Start Mic
             </button>
@@ -337,7 +337,7 @@
     }
 
     // ──────────────────────────────────────────────
-    // OTHER FUNCTIONS (condensed but complete)
+    // UI & MODE LOGIC
     // ──────────────────────────────────────────────
     function selectGrade(g) {
       currentGrade = g;
