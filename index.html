@@ -4,11 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Bassoon Technique Trainer • Grades 1–8</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Production-ready Tailwind (no CDN warning) -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css" rel="stylesheet">
+
+  <!-- Silence favicon 404 -->
+  <link rel="icon" href="data:,">
+
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Inter', system-ui, sans-serif; }
-    .glass { background: rgba(30, 41, 59, 0.65); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
+    .glass { background: rgba(30,41,59,0.65); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
     .note-pill { transition: all 0.22s ease; font-variant-numeric: tabular-nums; }
     .note-pill.highlight { transform: scale(1.18); background-color: #10b981 !important; color: white; box-shadow: 0 10px 25px -5px rgba(16,185,129,0.5); }
     .note-pill.current { background-color: #eab308; color: black; box-shadow: 0 0 0 3px rgba(234,179,8,0.4); }
@@ -16,7 +22,7 @@
     .note-pill.wrong   { background-color: #ef4444; color: white; }
     canvas { image-rendering: pixelated; }
     .tuner-bar { height: 12px; background: linear-gradient(to right, #ef4444, #eab308, #10b981, #eab308, #ef4444); border-radius: 9999px; position: relative; overflow: hidden; }
-    .tuner-needle { position: absolute; top: -4px; width: 4px; height: 20px; background: white; box-shadow: 0 0 8px white; transition: left 0.05s linear; }
+    .tuner-needle { position: absolute; top: -4px; width: 4px; height: 20px; background: white; box-shadow: 0 0 8px white; transition: left 0.08s linear; }
   </style>
 </head>
 <body class="bg-gradient-to-b from-slate-950 to-slate-900 text-slate-100 min-h-screen antialiased">
@@ -31,7 +37,7 @@
         </h1>
         <p class="mt-2 text-slate-400 text-lg">Scales • Arpeggios • Broken Chords • ABRSM 2022–2026</p>
       </div>
-      <div class="text-sm text-slate-500">v2.5 • Tuner + Modes</div>
+      <div class="text-sm text-slate-500">v2.6 • Real-time Tuner</div>
     </header>
 
     <!-- Grade Tabs -->
@@ -67,7 +73,7 @@
         </div>
       </aside>
 
-      <!-- Main -->
+      <!-- Main Content -->
       <main class="lg:col-span-8 space-y-6">
 
         <!-- Controls -->
@@ -77,6 +83,7 @@
               <h2 id="selected-title" class="text-2xl sm:text-3xl font-bold text-white">Select an exercise</h2>
               <p id="selected-desc" class="mt-1 text-slate-400"></p>
             </div>
+
             <div id="mode-dependent-btn"></div>
           </div>
 
@@ -164,109 +171,439 @@
   </div>
 
   <script>
-  // ... (keep all previous state, helpers, UI functions: selectGrade, setMode, renderItems, loadItem, playSequence, startSession, etc.)
+    // ──────────────────────────────────────────────
+    // STATE
+    // ──────────────────────────────────────────────
+    let currentGrade = 1;
+    let currentMode = 'scale';
+    let currentItem = null;
+    let sequence = [];
+    let currentIndex = 0;
 
-  // TUNER + LISTENING (fixed & debug version)
-  function updateTuner(freq) {
-    const noteEl = document.getElementById('tuner-note');
-    const needle = document.getElementById('tuner-needle');
+    let audioCtx = null;
+    let isPlaying = false;
+    let stream = null;
+    let analyser = null;
+    let rafId = null;
+    let detected = [];
+    let lastTime = 0;
+    let lastNote = null;
 
-    if (!noteEl || !needle) {
-      console.warn("Tuner DOM elements not found");
-      return;
+    let currentTempo = 72;
+    let learningMode = 'learning'; // learning | practice | performance
+    let sessionRunning = false;
+    let tempoTimer = null;
+    let frameSkip = 0;
+
+    const itemsByGrade = {
+      1: [
+        { name: "F Major scale", root: "F2", type: "major", octaves: 1,
+          notes: ["F2","G2","A2","Bb2","C3","D3","E3","F3","F3","E3","D3","C3","Bb2","A2","G2","F2"] },
+        { name: "Chromatic commencing on F", root: "F2", type: "chromatic", octaves: 1,
+          notes: ["F2","F#2","G2","G#2","A2","Bb2","B2","C3","C#3","D3","D#3","E3","F3","F3","E3","Eb3","D3","Db3","C3","B2","Bb2","A2","Ab2","G2","Gb2","F2"] },
+        { name: "F Major arpeggio / broken chord", root: "F2", type: "major", octaves: 1,
+          notes: ["F2","A2","C3","F3","C3","A2","F2"] }
+      ]
+    };
+
+    // ──────────────────────────────────────────────
+    // HELPERS
+    // ──────────────────────────────────────────────
+    const NOTES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+
+    function noteToMidi(s) {
+      try {
+        let n = s.replace(/♭/g, 'b').replace(/♯/g, '#');
+        const m = n.match(/^([A-Ga-g])([#b]?)([-]?[0-8])$/i);
+        if (!m) return 60;
+        let [_, lettr, acc, octStr] = m;
+        lettr = lettr.toUpperCase();
+        let octave = parseInt(octStr);
+        const base = {C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+        let midi = base[lettr] + (octave + 1) * 12;
+        if (acc === '#') midi += 1;
+        if (acc === 'b') midi -= 1;
+        return midi;
+      } catch { return 60; }
     }
 
-    if (freq < 40) {
-      noteEl.textContent = '—';
-      needle.style.left = '50%';
-      return;
+    function midiToNote(m) {
+      let o = Math.floor(m / 12) - 1;
+      let i = m % 12;
+      return NOTES[i] + o;
     }
 
-    const midi = 12 * Math.log2(freq / 440) + 69;
-    const nearestMidi = Math.round(midi);
-    const cents = 1200 * Math.log2(freq / midiToFreq(nearestMidi));
-
-    const noteName = midiToNote(nearestMidi);
-    noteEl.textContent = noteName;
-
-    // Position: 50% = perfect, range -50 to +50 cents → 0–100%
-    let pos = 50 + cents;
-    pos = Math.max(0, Math.min(100, pos));
-    needle.style.left = `${pos}%`;
-
-    console.log(`Tuner: ${noteName}, ${cents.toFixed(1)} cents, freq=${freq.toFixed(1)} Hz`);
-  }
-
-  function listen() {
-    if (!analyser) {
-      console.warn("Analyser not ready");
-      rafId = requestAnimationFrame(listen);
-      return;
+    function midiToFreq(m) {
+      return 440 * Math.pow(2, (m - 69) / 12);
     }
 
-    const buf = new Float32Array(analyser.fftSize);
-    analyser.getFloatTimeDomainData(buf);
-    const freq = autoCorrelate(buf, audioCtx.sampleRate);
+    function autoCorrelate(buf, sr) {
+      const SIZE = buf.length;
+      let rms = 0;
+      for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
+      rms = Math.sqrt(rms / SIZE);
+      if (rms < 0.01) return -1;
 
-    updateTuner(freq);
+      const MAX_LAG = Math.min(512, SIZE >> 1); // reduced range
+      let best_offset = -1;
+      let best_corr = 0;
 
-    if (freq > 40) {
-      const midi = Math.round(12 * Math.log2(freq / 440) + 69);
-      const note = midiToNote(midi);
-      document.getElementById('live-pitch').textContent = note;
-
-      const now = Date.now();
-      if (note === lastNote && now - lastTime > 180) {  // slightly longer debounce for stability
-        const expected = sequence[currentIndex];
-        const isCorrect = note === expected;
-
-        document.getElementById('you-played-live').textContent = note;
-        document.getElementById('you-played-live').style.color = isCorrect ? '#10b981' : '#ef4444';
-
-        if (detected.length <= currentIndex) detected[currentIndex] = note;
-
-        if (isCorrect) {
-          markNote(currentIndex, true);
-          if (learningMode === 'practice') {
-            currentIndex = Math.min(currentIndex + 1, sequence.length - 1);
-            updateLiveExpected();
-            if (currentIndex >= sequence.length - 1) stopSession();
-          }
-        } else if (learningMode === 'performance') {
-          markNote(currentIndex, false);
+      for (let offset = 20; offset < MAX_LAG; offset += 1) { // step by 1, but limited
+        let corr = 0;
+        let count = 0;
+        for (let i = 0; i < SIZE - offset; i += 2) { // skip every other sample
+          corr += Math.abs(buf[i] - buf[i + offset]);
+          count++;
         }
-      } else if (note !== lastNote) {
-        lastNote = note;
-        lastTime = now;
+        corr = 1 - (corr / count);
+        if (corr > best_corr) {
+          best_corr = corr;
+          best_offset = offset;
+        }
       }
-    } else {
-      document.getElementById('live-pitch').textContent = '—';
-      document.getElementById('you-played-live').textContent = '—';
+
+      if (best_corr > 0.28 && best_offset > 0) {
+        return sr / best_offset;
+      }
+      return -1;
     }
 
-    rafId = requestAnimationFrame(listen);
-  }
+    // ──────────────────────────────────────────────
+    // UI & MODE
+    // ──────────────────────────────────────────────
+    function selectGrade(g) {
+      currentGrade = g;
+      document.querySelectorAll('.grade-btn').forEach(b => {
+        const t = b.textContent.trim();
+        const num = t === 'Grade 1' ? 1 : parseInt(t);
+        b.dataset.active = (num === g).toString();
+      });
+      renderItems();
+    }
 
-  // Make sure startListening calls updateModeUI or similar if needed
-  async function startListening() {
-    await initAudio();
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: false, noiseSuppression: false}});
-      console.log("Mic stream acquired");
-      const src = audioCtx.createMediaStreamSource(stream);
-      analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 2048;
-      src.connect(analyser);
+    function setMode(m) {
+      currentMode = m;
+      document.querySelectorAll('.mode-btn').forEach(b => b.dataset.active = (b.id === `mode-${m}`).toString());
+      renderItems();
+      currentItem = null;
+      document.getElementById('selected-title').textContent = 'Select an exercise';
+      document.getElementById('notes-container').innerHTML = '';
+      updateModeUI();
+    }
+
+    function setLearningMode(mode) {
+      learningMode = mode;
+      ['learning','practice','performance'].forEach(m => {
+        document.getElementById(`${m}-btn`).dataset.active = (m === mode).toString();
+      });
+      document.getElementById('live-feedback').classList.toggle('hidden', mode === 'learning');
+      updateModeUI();
+    }
+
+    function updateModeUI() {
+      const container = document.getElementById('mode-dependent-btn');
+      container.innerHTML = '';
+      const isLearning = learningMode === 'learning';
+      const btn = document.createElement('button');
+      btn.className = 'inline-flex items-center gap-2 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl shadow-lg transition-all disabled:opacity-50';
+      if (isLearning) {
+        btn.onclick = playSequence;
+        btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg> Play`;
+      } else {
+        btn.onclick = toggleSession;
+        btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg> <span>${sessionRunning ? 'Pause' : 'Start'}</span>`;
+      }
+      container.appendChild(btn);
+    }
+
+    function renderItems() {
+      const cont = document.getElementById('item-list');
+      cont.innerHTML = '';
+      (itemsByGrade[currentGrade] || []).forEach(item => {
+        const div = document.createElement('div');
+        div.className = `px-4 py-3.5 bg-slate-800/60 hover:bg-slate-700/70 rounded-xl cursor-pointer ${currentItem?.name === item.name ? 'ring-2 ring-emerald-500' : ''}`;
+        div.innerHTML = `<div class="font-medium">${item.name}</div><div class="text-xs text-slate-500">${item.octaves} oct • ${item.type}</div>`;
+        div.onclick = () => loadItem(item);
+        cont.appendChild(div);
+      });
+    }
+
+    function loadItem(item) {
+      currentItem = item;
+      sequence = item.notes;
+      currentIndex = 0;
+
+      const label = currentMode === 'scale' ? 'Scale' : currentMode === 'arpeggio' ? 'Arpeggio' : 'Broken chords';
+      document.getElementById('selected-title').textContent = `${label} – ${item.name}`;
+      document.getElementById('selected-desc').textContent = `${item.octaves} octave${item.octaves>1?'s':''} • ${item.type} • Root ${item.root}`;
+
+      const cont = document.getElementById('notes-container');
+      cont.innerHTML = '';
+      sequence.forEach((n, i) => {
+        const p = document.createElement('div');
+        p.className = 'note-pill px-5 py-3 bg-slate-800/70 rounded-lg text-center min-w-[60px] text-base font-medium';
+        p.textContent = n;
+        p.dataset.index = i;
+        cont.appendChild(p);
+      });
+
+      document.getElementById('results-area').classList.add('hidden');
+      updateLiveExpected();
+      updateModeUI();
+    }
+
+    // ──────────────────────────────────────────────
+    // AUDIO & PLAYBACK
+    // ──────────────────────────────────────────────
+    async function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    async function playSequence() {
+      if (!currentItem || isPlaying || learningMode !== 'learning') return;
+      await initAudio();
+      isPlaying = true;
+      const playBtn = document.getElementById('btn-play');
+      if (playBtn) playBtn.disabled = true;
+
+      const pills = document.querySelectorAll('#notes-container > div');
+      const msPerBeat = 60000 / currentTempo;
+      const noteDur = msPerBeat * 0.85;
+
+      for (let i = 0; i < sequence.length; i++) {
+        if (!isPlaying) break;
+        pills.forEach((p, idx) => p.classList.toggle('highlight', idx === i));
+
+        const midi = noteToMidi(sequence[i]);
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const filt = audioCtx.createBiquadFilter();
+
+        osc.type = 'sawtooth';
+        filt.type = 'lowpass';
+        filt.frequency.value = 800;
+        osc.frequency.value = midiToFreq(midi);
+        gain.gain.value = 0.28;
+
+        osc.connect(filt).connect(gain).connect(audioCtx.destination);
+        osc.start();
+        setTimeout(() => {
+          gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.08);
+          osc.stop(audioCtx.currentTime + 0.12);
+        }, noteDur);
+
+        await new Promise(r => setTimeout(r, msPerBeat));
+      }
+
+      pills.forEach(p => p.classList.remove('highlight'));
+      isPlaying = false;
+      if (playBtn) playBtn.disabled = false;
+    }
+
+    // ──────────────────────────────────────────────
+    // SESSION CONTROL
+    // ──────────────────────────────────────────────
+    async function startSession() {
+      await initAudio();
+      sessionRunning = true;
+      currentIndex = 0;
+      detected = [];
+      const btn = document.getElementById('btn-session');
+      btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M10 9v2m4-2v2m7-5a9 9 0 01-9 9 9 9 0 01-9-9 9 9 0 019-9 9 9 0 019 9z"/></svg><span>Pause</span>`;
+
+      startListening();
+
+      if (learningMode === 'performance') startTempoTimer();
+      updateLiveExpected();
+    }
+
+    function pauseSession() {
+      sessionRunning = false;
+      if (tempoTimer) clearTimeout(tempoTimer);
+      const btn = document.getElementById('btn-session');
+      btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg><span>Resume</span>`;
+    }
+
+    function toggleSession() {
+      if (!currentItem) return alert("Select an exercise first");
+      if (!sessionRunning) startSession();
+      else pauseSession();
+    }
+
+    function startTempoTimer() {
+      const ms = 60000 / currentTempo;
+      tempoTimer = setTimeout(() => {
+        if (!sessionRunning || learningMode !== 'performance') return;
+        currentIndex = Math.min(currentIndex + 1, sequence.length - 1);
+        updateLiveExpected();
+        if (currentIndex < sequence.length - 1) startTempoTimer();
+        else stopSession();
+      }, ms);
+    }
+
+    function updateLiveExpected() {
+      document.getElementById('expected-live').textContent = sequence[currentIndex] || '—';
+      document.querySelectorAll('.note-pill').forEach(p => {
+        p.classList.remove('current');
+        if (parseInt(p.dataset.index) === currentIndex) p.classList.add('current');
+      });
+    }
+
+    function markNote(idx, correct) {
+      const p = document.querySelector(`.note-pill[data-index="${idx}"]`);
+      if (p) p.classList.add(correct ? 'correct' : 'wrong');
+    }
+
+    // ──────────────────────────────────────────────
+    // LISTENING + TUNER
+    // ──────────────────────────────────────────────
+    async function startListening() {
+      await initAudio();
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: false, noiseSuppression: false}});
+        console.log("Microphone started");
+        const src = audioCtx.createMediaStreamSource(stream);
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 1024; // reduced for performance
+        src.connect(analyser);
+        rafId = requestAnimationFrame(listen);
+      } catch (e) {
+        console.error("Mic error:", e);
+        alert('Microphone access denied or failed.');
+      }
+    }
+
+    function listen() {
+      if (!analyser) {
+        rafId = requestAnimationFrame(listen);
+        return;
+      }
+
+      frameSkip = (frameSkip + 1) % 2; // run heavy detection every 2nd frame
+
+      const buf = new Float32Array(analyser.fftSize);
+      analyser.getFloatTimeDomainData(buf);
+
+      let freq = -1;
+      if (frameSkip === 0) {
+        freq = autoCorrelate(buf, audioCtx.sampleRate);
+      }
+
+      updateTuner(freq > 40 ? freq : 0);
+
+      if (freq > 40) {
+        const midi = Math.round(12 * Math.log2(freq / 440) + 69);
+        const note = midiToNote(midi);
+        document.getElementById('live-pitch').textContent = note;
+
+        const now = Date.now();
+        if (note === lastNote && now - lastTime > 180) {
+          const exp = sequence[currentIndex];
+          const correct = note === exp;
+
+          document.getElementById('you-played-live').textContent = note;
+          document.getElementById('you-played-live').style.color = correct ? '#10b981' : '#ef4444';
+
+          if (detected.length <= currentIndex) detected[currentIndex] = note;
+
+          if (correct) {
+            markNote(currentIndex, true);
+            if (learningMode === 'practice') {
+              currentIndex = Math.min(currentIndex + 1, sequence.length - 1);
+              updateLiveExpected();
+              if (currentIndex >= sequence.length - 1) stopSession();
+            }
+          } else if (learningMode === 'performance') {
+            markNote(currentIndex, false);
+          }
+        } else if (note !== lastNote) {
+          lastNote = note;
+          lastTime = now;
+        }
+      } else {
+        document.getElementById('live-pitch').textContent = '—';
+        document.getElementById('you-played-live').textContent = '—';
+      }
+
       rafId = requestAnimationFrame(listen);
-      // Show tuner UI if hidden
-      document.querySelector('.glass:has(#tuner-note)').classList.remove('hidden');
-    } catch (e) {
-      console.error("Mic error:", e);
-      alert('Microphone access failed: ' + e.message + '\nTry allowing in browser settings or using localhost.');
     }
-  }
 
-  // ... rest of your script (stopSession, stopAndAnalyze, initAudio, etc.) remains the same
-</script>
+    function updateTuner(freq) {
+      const noteEl = document.getElementById('tuner-note');
+      const needle = document.getElementById('tuner-needle');
+
+      if (freq < 40) {
+        noteEl.textContent = '—';
+        needle.style.left = '50%';
+        return;
+      }
+
+      const midi = 12 * Math.log2(freq / 440) + 69;
+      const nearest = Math.round(midi);
+      const cents = 1200 * Math.log2(freq / midiToFreq(nearest));
+
+      noteEl.textContent = midiToNote(nearest);
+
+      let pos = 50 + cents;
+      pos = Math.max(0, Math.min(100, pos));
+      needle.style.left = `${pos}%`;
+    }
+
+    function stopSession() {
+      if (rafId) cancelAnimationFrame(rafId);
+      if (tempoTimer) clearTimeout(tempoTimer);
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      sessionRunning = false;
+      document.getElementById('btn-session').innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg><span>Start Again</span>`;
+    }
+
+    function stopAndAnalyze() {
+      stopSession();
+      const rows = document.getElementById('results-rows');
+      rows.innerHTML = '';
+      let correct = 0;
+      sequence.forEach((exp, i) => {
+        const got = detected[i] || '—';
+        const match = got === exp;
+        if (match) correct++;
+        const row = document.createElement('div');
+        row.className = 'flex justify-between items-center bg-slate-900/50 px-5 py-3.5 rounded-xl';
+        row.innerHTML = `
+          <div class="flex-1"><div class="text-emerald-400 text-xs">EXPECTED</div><div class="text-lg font-medium">${exp}</div></div>
+          <div class="text-center flex-1"><div class="text-orange-400 text-xs">YOU PLAYED</div><div class="text-lg font-medium ${match ? 'text-emerald-400' : 'text-red-400'}">${got}</div></div>
+          <div class="text-2xl">${match ? '✅' : '❌'}</div>`;
+        rows.appendChild(row);
+      });
+      const pct = sequence.length ? Math.round(correct / sequence.length * 100) : 0;
+      document.getElementById('score-display').textContent = `${pct}%`;
+      document.getElementById('results-area').classList.remove('hidden');
+    }
+
+    async function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    function setupCanvas() {
+      const canvas = document.getElementById('pitch-canvas');
+      const ctx = canvas.getContext('2d');
+      // Add your drawPitch if needed for legacy visualization
+    }
+
+    // ──────────────────────────────────────────────
+    // INIT
+    // ──────────────────────────────────────────────
+    window.addEventListener('load', () => {
+      setupCanvas();
+      selectGrade(1);
+      setMode('scale');
+      renderItems();
+      setLearningMode('learning');
+
+      setTimeout(() => {
+        const first = itemsByGrade[1]?.[0];
+        if (first) loadItem(first);
+      }, 400);
+    });
+  </script>
 </body>
 </html>
