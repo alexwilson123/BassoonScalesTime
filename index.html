@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Bassoon Technique Trainer • Grades 1–8</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Inter', system-ui, sans-serif; }
@@ -33,7 +31,7 @@
         </h1>
         <p class="mt-2 text-slate-400 text-lg">Scales • Arpeggios • Broken Chords • ABRSM 2022–2026</p>
       </div>
-      <div class="text-sm text-slate-500">v2.5 • Real-time Tuner</div>
+      <div class="text-sm text-slate-500">v2.5 • Tuner + Modes</div>
     </header>
 
     <!-- Grade Tabs -->
@@ -69,24 +67,22 @@
         </div>
       </aside>
 
-      <!-- Main Content -->
+      <!-- Main -->
       <main class="lg:col-span-8 space-y-6">
 
-        <!-- Controls + Tempo -->
+        <!-- Controls -->
         <div class="glass rounded-2xl p-6 shadow-xl shadow-black/30">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
             <div>
               <h2 id="selected-title" class="text-2xl sm:text-3xl font-bold text-white">Select an exercise</h2>
               <p id="selected-desc" class="mt-1 text-slate-400"></p>
             </div>
-
             <div id="mode-dependent-btn"></div>
           </div>
 
           <div class="mt-4">
             <label class="block text-sm font-medium text-slate-300 mb-2">Tempo: <span id="tempo-value">72</span> BPM</label>
-            <input type="range" id="tempo-slider" min="40" max="160" value="72" step="1"
-                   class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+            <input type="range" id="tempo-slider" min="40" max="160" value="72" step="1" class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500">
           </div>
 
           <div class="mt-6 flex bg-slate-800 rounded-xl p-1 text-sm">
@@ -120,7 +116,7 @@
           <div class="tuner-bar relative">
             <div id="tuner-needle" class="tuner-needle left-1/2"></div>
           </div>
-          <div class="flex justify-between text-[10px] text-slate-500 mt-1 px-1">
+          <div class="flex justify-between text-xs text-slate-500 mt-1 px-1">
             <span>−50¢</span><span>0¢ (in tune)</span><span>+50¢</span>
           </div>
         </div>
@@ -142,15 +138,13 @@
           </div>
 
           <div class="grid sm:grid-cols-2 gap-4">
-            <button onclick="startListening()" id="btn-listen" 
-              class="inline-flex items-center justify-center gap-2 px-8 py-5 bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-semibold rounded-xl shadow-lg shadow-orange-900/30 transition-all hidden">
+            <button onclick="startListening()" id="btn-listen" class="inline-flex items-center justify-center gap-2 px-8 py-5 bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-semibold rounded-xl shadow-lg shadow-orange-900/30 transition-all hidden">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
               Start Mic
             </button>
-            <button onclick="stopAndAnalyze()" id="btn-analyze" 
-              class="hidden inline-flex items-center justify-center gap-2 px-8 py-5 bg-slate-700 hover:bg-slate-600 active:bg-slate-800 text-white font-semibold rounded-xl shadow-lg transition-all">
+            <button onclick="stopAndAnalyze()" id="btn-analyze" class="hidden inline-flex items-center justify-center gap-2 px-8 py-5 bg-slate-700 hover:bg-slate-600 active:bg-slate-800 text-white font-semibold rounded-xl shadow-lg transition-all">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
-              Stop & Final Check
+              Stop & Check
             </button>
           </div>
         </div>
@@ -170,26 +164,24 @@
   </div>
 
   <script>
-    // ──────────────────────────────────────────────
     // STATE
-    // ──────────────────────────────────────────────
     let currentGrade = 1;
-    let currentMode  = 'scale';
-    let currentItem  = null;
-    let sequence     = [];
+    let currentMode = 'scale';
+    let currentItem = null;
+    let sequence = [];
     let currentIndex = 0;
 
-    let audioCtx     = null;
-    let isPlaying    = false;
-    let stream       = null;
-    let analyser     = null;
-    let rafId        = null;
-    let detected     = [];
-    let lastTime     = 0;
-    let lastNote     = null;
+    let audioCtx = null;
+    let isPlaying = false;
+    let stream = null;
+    let analyser = null;
+    let rafId = null;
+    let detected = [];
+    let lastTime = 0;
+    let lastNote = null;
 
     let currentTempo = 72;
-    let learningMode = 'learning'; // 'learning' | 'practice' | 'performance'
+    let learningMode = 'learning'; // learning | practice | performance
     let sessionRunning = false;
     let tempoTimer = null;
 
@@ -204,21 +196,19 @@
       ]
     };
 
-    // ──────────────────────────────────────────────
-    // MUSIC HELPERS
-    // ──────────────────────────────────────────────
+    // HELPERS
     const NOTES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 
     function noteToMidi(s) {
       try {
-        let normalized = s.replace(/♭/g, 'b').replace(/♯/g, '#');
-        const match = normalized.match(/^([A-Ga-g])([#b]?)([-]?[0-8])$/i);
-        if (!match) return 60;
-        let [_, letter, acc, octStr] = match;
-        letter = letter.toUpperCase();
+        let n = s.replace(/♭/g, 'b').replace(/♯/g, '#');
+        const m = n.match(/^([A-Ga-g])([#b]?)([-]?[0-8])$/i);
+        if (!m) return 60;
+        let [_, lettr, acc, octStr] = m;
+        lettr = lettr.toUpperCase();
         let octave = parseInt(octStr);
-        const base = { C:0, D:2, E:4, F:5, G:7, A:9, B:11 };
-        let midi = base[letter] + (octave + 1) * 12;
+        const base = {C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+        let midi = base[lettr] + (octave + 1) * 12;
         if (acc === '#') midi += 1;
         if (acc === 'b') midi -= 1;
         return midi;
@@ -226,50 +216,219 @@
     }
 
     function midiToNote(m) {
-      let octave = Math.floor(m / 12) - 1;
-      let idx = m % 12;
-      return NOTES[idx] + octave;
+      let o = Math.floor(m / 12) - 1;
+      let i = m % 12;
+      return NOTES[i] + o;
     }
 
     function midiToFreq(m) {
       return 440 * Math.pow(2, (m - 69) / 12);
     }
 
-    // ──────────────────────────────────────────────
-    // TUNER LOGIC
-    // ──────────────────────────────────────────────
-    function updateTuner(freq) {
-      const noteEl = document.getElementById('tuner-note');
-      const needle = document.getElementById('tuner-needle');
-
-      if (freq < 40) {
-        noteEl.textContent = '—';
-        needle.style.left = '50%';
-        return;
-      }
-
-      const midi = 12 * Math.log2(freq / 440) + 69;
-      const nearestMidi = Math.round(midi);
-      const cents = 1200 * Math.log2(freq / midiToFreq(nearestMidi));
-
-      const noteName = midiToNote(nearestMidi);
-      noteEl.textContent = noteName;
-
-      // -50 to +50 cents mapped to 0–100%
-      let pos = 50 + cents;
-      pos = Math.max(0, Math.min(100, pos));
-      needle.style.left = `${pos}%`;
+    // UI
+    function selectGrade(g) {
+      currentGrade = g;
+      document.querySelectorAll('.grade-btn').forEach(b => {
+        const t = b.textContent.trim();
+        const num = t === 'Grade 1' ? 1 : parseInt(t);
+        b.dataset.active = (num === g).toString();
+      });
+      renderItems();
     }
 
-    // ──────────────────────────────────────────────
-    // LISTENING (now includes tuner update)
-    // ──────────────────────────────────────────────
+    function setMode(m) {
+      currentMode = m;
+      document.querySelectorAll('.mode-btn').forEach(b => b.dataset.active = (b.id === `mode-${m}`).toString());
+      renderItems();
+      currentItem = null;
+      document.getElementById('selected-title').textContent = 'Select an exercise';
+      document.getElementById('notes-container').innerHTML = '';
+      updateModeUI();
+    }
+
+    function setLearningMode(mode) {
+      learningMode = mode;
+      ['learning','practice','performance'].forEach(m => {
+        document.getElementById(`${m}-btn`).dataset.active = (m === mode).toString();
+      });
+      document.getElementById('live-feedback').classList.toggle('hidden', mode === 'learning');
+      updateModeUI();
+    }
+
+    function updateModeUI() {
+      const container = document.getElementById('mode-dependent-btn');
+      container.innerHTML = '';
+      const isLearning = learningMode === 'learning';
+      const btn = document.createElement('button');
+      if (isLearning) {
+        btn.onclick = playSequence;
+        btn.id = 'btn-play';
+        btn.className = 'inline-flex items-center gap-2 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl shadow-lg transition-all disabled:opacity-50';
+        btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg> Play`;
+      } else {
+        btn.onclick = toggleSession;
+        btn.id = 'btn-session';
+        btn.className = 'inline-flex items-center gap-2 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl shadow-lg transition-all disabled:opacity-50';
+        btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg> <span>Start</span>`;
+      }
+      container.appendChild(btn);
+    }
+
+    function renderItems() {
+      const cont = document.getElementById('item-list');
+      cont.innerHTML = '';
+      (itemsByGrade[currentGrade] || []).forEach(item => {
+        const div = document.createElement('div');
+        div.className = `px-4 py-3.5 bg-slate-800/60 hover:bg-slate-700/70 rounded-xl cursor-pointer ${currentItem?.name === item.name ? 'ring-2 ring-emerald-500' : ''}`;
+        div.innerHTML = `<div class="font-medium">${item.name}</div><div class="text-xs text-slate-500">${item.octaves} oct • ${item.type}</div>`;
+        div.onclick = () => loadItem(item);
+        cont.appendChild(div);
+      });
+    }
+
+    function loadItem(item) {
+      currentItem = item;
+      sequence = item.notes;
+      currentIndex = 0;
+
+      const label = currentMode === 'scale' ? 'Scale' : currentMode === 'arpeggio' ? 'Arpeggio' : 'Broken chords';
+      document.getElementById('selected-title').textContent = `${label} – ${item.name}`;
+      document.getElementById('selected-desc').textContent = `${item.octaves} octave${item.octaves>1?'s':''} • ${item.type} • Root ${item.root}`;
+
+      const cont = document.getElementById('notes-container');
+      cont.innerHTML = '';
+      sequence.forEach((n, i) => {
+        const p = document.createElement('div');
+        p.className = 'note-pill px-5 py-3 bg-slate-800/70 rounded-lg text-center min-w-[60px] text-base font-medium';
+        p.textContent = n;
+        p.dataset.index = i;
+        cont.appendChild(p);
+      });
+
+      document.getElementById('results-area').classList.add('hidden');
+      updateLiveExpected();
+      updateModeUI();
+    }
+
+    // TEMPO
+    document.getElementById('tempo-slider').addEventListener('input', e => {
+      currentTempo = parseInt(e.target.value);
+      document.getElementById('tempo-value').textContent = currentTempo;
+    });
+
+    // PLAYBACK (Learning mode)
+    async function playSequence() {
+      if (!currentItem || isPlaying || learningMode !== 'learning') return;
+      await initAudio();
+      isPlaying = true;
+      document.getElementById('btn-play').disabled = true;
+
+      const pills = document.querySelectorAll('#notes-container > div');
+      const msPerBeat = 60000 / currentTempo;
+      const noteDur = msPerBeat * 0.85;
+
+      for (let i = 0; i < sequence.length; i++) {
+        if (!isPlaying) break;
+        pills.forEach((p, idx) => p.classList.toggle('highlight', idx === i));
+
+        const midi = noteToMidi(sequence[i]);
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const filt = audioCtx.createBiquadFilter();
+
+        osc.type = 'sawtooth';
+        filt.type = 'lowpass';
+        filt.frequency.value = 800;
+        osc.frequency.value = midiToFreq(midi);
+        gain.gain.value = 0.28;
+
+        osc.connect(filt).connect(gain).connect(audioCtx.destination);
+        osc.start();
+        setTimeout(() => {
+          gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.08);
+          osc.stop(audioCtx.currentTime + 0.12);
+        }, noteDur);
+
+        await new Promise(r => setTimeout(r, msPerBeat));
+      }
+
+      pills.forEach(p => p.classList.remove('highlight'));
+      isPlaying = false;
+      document.getElementById('btn-play').disabled = false;
+    }
+
+    // SESSION (Practice & Performance)
+    async function startSession() {
+      await initAudio();
+      sessionRunning = true;
+      currentIndex = 0;
+      detected = [];
+      document.getElementById('btn-session').innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M10 9v2m4-2v2m7-5a9 9 0 01-9 9 9 9 0 01-9-9 9 9 0 019-9 9 9 0 019 9z"/></svg><span>Pause</span>`;
+      document.getElementById('btn-listen').classList.add('hidden');
+      document.getElementById('btn-analyze').classList.remove('hidden');
+
+      startListening();
+
+      if (learningMode === 'performance') startTempoTimer();
+      updateLiveExpected();
+    }
+
+    function pauseSession() {
+      sessionRunning = false;
+      if (tempoTimer) clearTimeout(tempoTimer);
+      document.getElementById('btn-session').innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg><span>Resume</span>`;
+    }
+
+    function toggleSession() {
+      if (!currentItem) return alert("Select an exercise first");
+      if (!sessionRunning) startSession();
+      else pauseSession();
+    }
+
+    function startTempoTimer() {
+      const ms = 60000 / currentTempo;
+      tempoTimer = setTimeout(() => {
+        if (!sessionRunning || learningMode !== 'performance') return;
+        currentIndex = Math.min(currentIndex + 1, sequence.length - 1);
+        updateLiveExpected();
+        if (currentIndex < sequence.length - 1) startTempoTimer();
+        else stopSession();
+      }, ms);
+    }
+
+    function updateLiveExpected() {
+      document.getElementById('expected-live').textContent = sequence[currentIndex] || '—';
+      document.querySelectorAll('.note-pill').forEach(p => {
+        p.classList.remove('current');
+        if (parseInt(p.dataset.index) === currentIndex) p.classList.add('current');
+      });
+    }
+
+    function markNote(idx, correct) {
+      const p = document.querySelector(`.note-pill[data-index="${idx}"]`);
+      if (p) p.classList.add(correct ? 'correct' : 'wrong');
+    }
+
+    async function startListening() {
+      await initAudio();
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation:false, noiseSuppression:false}});
+        const src = audioCtx.createMediaStreamSource(stream);
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        src.connect(analyser);
+        rafId = requestAnimationFrame(listen);
+      } catch (e) {
+        alert('Mic access denied.');
+      }
+    }
+
     function listen() {
       const buf = new Float32Array(analyser.fftSize);
       analyser.getFloatTimeDomainData(buf);
       const freq = autoCorrelate(buf, audioCtx.sampleRate);
 
-      updateTuner(freq);  // tuner always updates when mic is on
+      updateTuner(freq);
 
       if (freq > 40) {
         const midi = Math.round(12 * Math.log2(freq / 440) + 69);
@@ -278,15 +437,15 @@
 
         const now = Date.now();
         if (note === lastNote && now - lastTime > 160) {
-          const expected = sequence[currentIndex];
-          const isCorrect = note === expected;
+          const exp = sequence[currentIndex];
+          const correct = note === exp;
 
           document.getElementById('you-played-live').textContent = note;
-          document.getElementById('you-played-live').style.color = isCorrect ? '#10b981' : '#ef4444';
+          document.getElementById('you-played-live').style.color = correct ? '#10b981' : '#ef4444';
 
           if (detected.length <= currentIndex) detected[currentIndex] = note;
 
-          if (isCorrect) {
+          if (correct) {
             markNote(currentIndex, true);
             if (learningMode === 'practice') {
               currentIndex = Math.min(currentIndex + 1, sequence.length - 1);
@@ -308,15 +467,84 @@
       rafId = requestAnimationFrame(listen);
     }
 
-    // ──────────────────────────────────────────────
-    // REMAINING LOGIC (init, modes, playback, session, etc.)
-    // ──────────────────────────────────────────────
-    // ... (copy all the previous functions here: selectGrade, setMode, setLearningMode, updateModeUI, renderItems, loadItem, playSequence, startSession, pauseSession, toggleSession, startTempoTimer, updateLiveExpected, markNote, startListening, stopSession, stopAndAnalyze, setupCanvas, drawPitch, autoCorrelate)
-    // For brevity, assume they are the same as in the last working version you had.
+    function updateTuner(freq) {
+      const noteEl = document.getElementById('tuner-note');
+      const needle = document.getElementById('tuner-needle');
+      if (freq < 40) {
+        noteEl.textContent = '—';
+        needle.style.left = '50%';
+        return;
+      }
+      const midi = 12 * Math.log2(freq / 440) + 69;
+      const nearest = Math.round(midi);
+      const cents = 1200 * Math.log2(freq / midiToFreq(nearest));
+      noteEl.textContent = midiToNote(nearest);
+      let pos = 50 + cents;
+      pos = Math.max(0, Math.min(100, pos));
+      needle.style.left = `${pos}%`;
+    }
 
-    // Make sure to include this in the listen function call chain:
-    // rafId = requestAnimationFrame(listen);
+    function autoCorrelate(buf, sr) {
+      const SIZE = buf.length;
+      const MAX = SIZE >> 1;
+      let best_offset = -1, best_corr = 0, rms = 0;
+      for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
+      rms = Math.sqrt(rms / SIZE);
+      if (rms < 0.01) return -1;
+      for (let off = 0; off < MAX; off++) {
+        let corr = 0;
+        for (let i = 0; i < MAX; i++) corr += Math.abs(buf[i] - buf[i+off]);
+        corr = 1 - (corr / MAX);
+        if (corr > best_corr) {
+          best_corr = corr;
+          best_offset = off;
+        }
+      }
+      if (best_corr > 0.3 && best_offset > 0) return sr / best_offset;
+      return -1;
+    }
 
+    function stopSession() {
+      if (rafId) cancelAnimationFrame(rafId);
+      if (tempoTimer) clearTimeout(tempoTimer);
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      sessionRunning = false;
+      document.getElementById('btn-session').innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg><span>Start Again</span>`;
+    }
+
+    function stopAndAnalyze() {
+      stopSession();
+      const rows = document.getElementById('results-rows');
+      rows.innerHTML = '';
+      let correct = 0;
+      sequence.forEach((exp, i) => {
+        const got = detected[i] || '—';
+        const match = got === exp;
+        if (match) correct++;
+        const row = document.createElement('div');
+        row.className = 'flex justify-between items-center bg-slate-900/50 px-5 py-3.5 rounded-xl';
+        row.innerHTML = `
+          <div class="flex-1"><div class="text-emerald-400 text-xs">EXPECTED</div><div class="text-lg font-medium">${exp}</div></div>
+          <div class="text-center flex-1"><div class="text-orange-400 text-xs">YOU PLAYED</div><div class="text-lg font-medium ${match ? 'text-emerald-400' : 'text-red-400'}">${got}</div></div>
+          <div class="text-2xl">${match ? '✅' : '❌'}</div>`;
+        rows.appendChild(row);
+      });
+      const pct = sequence.length ? Math.round(correct / sequence.length * 100) : 0;
+      document.getElementById('score-display').textContent = `${pct}%`;
+      document.getElementById('results-area').classList.remove('hidden');
+    }
+
+    async function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    function setupCanvas() {
+      const c = document.getElementById('pitch-canvas');
+      const ctx = c.getContext('2d');
+      // keep your drawPitch function
+    }
+
+    // INIT
     window.addEventListener('load', () => {
       setupCanvas();
       selectGrade(1);
