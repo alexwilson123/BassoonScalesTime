@@ -150,7 +150,24 @@ function updateModeUI() {
 function renderItems() {
   const cont = document.getElementById('item-list');
   cont.innerHTML = '';
+<<<<<<< ours
   (itemsByGrade[currentGrade] || []).forEach((item) => {
+=======
+  const modeItems = (itemsByGrade[currentGrade] || []).filter((item) => {
+    const categories = item.categories || ['scale'];
+    return categories.includes(currentMode);
+  });
+
+  if (!modeItems.length) {
+    const empty = document.createElement('div');
+    empty.className = 'px-4 py-6 bg-slate-800/30 rounded-xl text-slate-400 text-sm';
+    empty.textContent = `No ${currentMode} exercises are available for Grade ${currentGrade} yet.`;
+    cont.appendChild(empty);
+    return;
+  }
+
+  modeItems.forEach((item) => {
+>>>>>>> theirs
     const div = document.createElement('div');
     div.className = `px-4 py-3.5 bg-slate-800/60 hover:bg-slate-700/70 rounded-xl cursor-pointer ${currentItem?.name === item.name ? 'ring-2 ring-emerald-500' : ''}`;
     div.innerHTML = `<div class="font-medium">${item.name}</div><div class="text-xs text-slate-500">${item.octaves} oct • ${item.type}</div>`;
