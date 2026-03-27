@@ -30,35 +30,11 @@ export function midiToFreq(midi) {
 
 export function autoCorrelate(buffer, sampleRate) {
   const size = buffer.length;
-<<<<<<< ours
-  const maxOffset = Math.min(1024, size >> 1);
-
-=======
->>>>>>> theirs
   let rms = 0;
   for (let i = 0; i < size; i++) rms += buffer[i] * buffer[i];
   rms = Math.sqrt(rms / size);
   if (rms < 0.01) return -1;
 
-<<<<<<< ours
-  let bestOffset = -1;
-  let bestCorrelation = 0;
-
-  for (let offset = 20; offset < maxOffset; offset++) {
-    let correlation = 0;
-    const count = size - offset;
-    for (let i = 0; i < count; i++) {
-      correlation += Math.abs(buffer[i] - buffer[i + offset]);
-    }
-    correlation = 1 - correlation / count;
-    if (correlation > bestCorrelation) {
-      bestCorrelation = correlation;
-      bestOffset = offset;
-    }
-  }
-
-  if (bestCorrelation > 0.25 && bestOffset > 0) return sampleRate / bestOffset;
-=======
   // Bassoon fundamentals can be low; search down to ~55Hz (A1).
   const minFreq = 55;
   const maxFreq = 1200;
@@ -94,6 +70,5 @@ export function autoCorrelate(buffer, sampleRate) {
 
   // Confidence gate to reduce octave-jump/noise detections.
   if (bestScore > 0.82 && bestLag > 0) return sampleRate / bestLag;
->>>>>>> theirs
   return -1;
 }
