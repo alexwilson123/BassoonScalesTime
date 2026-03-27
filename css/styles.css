@@ -1,0 +1,10 @@
+body { font-family: 'Inter', system-ui, sans-serif; }
+.glass { background: rgba(30, 41, 59, 0.65); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
+.note-pill { transition: all 0.22s ease; font-variant-numeric: tabular-nums; }
+.note-pill.highlight { transform: scale(1.18); background-color: #10b981 !important; color: white; box-shadow: 0 10px 25px -5px rgba(16,185,129,0.5); }
+.note-pill.current { background-color: #eab308; color: black; box-shadow: 0 0 0 3px rgba(234,179,8,0.4); }
+.note-pill.correct { background-color: #10b981; color: white; }
+.note-pill.wrong   { background-color: #ef4444; color: white; }
+canvas { image-rendering: pixelated; }
+.tuner-bar { height: 12px; background: linear-gradient(to right, #ef4444, #eab308, #10b981, #eab308, #ef4444); border-radius: 9999px; position: relative; overflow: hidden; }
+.tuner-needle { position: absolute; top: -4px; width: 4px; height: 20px; background: white; box-shadow: 0 0 8px white; transition: left 0.05s linear; }

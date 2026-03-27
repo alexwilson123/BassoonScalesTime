@@ -1,0 +1,398 @@
+import { itemsByGrade } from './data.js';
+import { noteToMidi, midiToNote, midiToFreq, autoCorrelate } from './audio-utils.js';
+
+let currentGrade = 1;
+let currentMode = 'scale';
+let currentItem = null;
+let sequence = [];
+let currentIndex = 0;
+
+let audioCtx = null;
+let isPlaying = false;
+let stream = null;
+let analyser = null;
+let rafId = null;
+let detected = [];
+let lastTime = 0;
+let lastNote = null;
+
+let currentTempo = 72;
+let learningMode = 'learning';
+let sessionRunning = false;
+let sessionPaused = false;
+let tempoTimer = null;
+
+let canvas;
+let ctx;
+
+function updateTuner(freq) {
+  const noteEl = document.getElementById('tuner-note');
+  const needle = document.getElementById('tuner-needle');
+  if (!noteEl || !needle) return;
+
+  if (freq < 40) {
+    noteEl.textContent = '—';
+    needle.style.left = '50%';
+    return;
+  }
+
+  const midi = 12 * Math.log2(freq / 440) + 69;
+  const nearest = Math.round(midi);
+  const cents = 1200 * Math.log2(freq / midiToFreq(nearest));
+
+  noteEl.textContent = midiToNote(nearest);
+
+  let pos = 50 + cents;
+  pos = Math.max(0, Math.min(100, pos));
+  needle.style.left = `${pos}%`;
+}
+
+function listen() {
+  if (!analyser) {
+    rafId = requestAnimationFrame(listen);
+    return;
+  }
+
+  const buf = new Float32Array(analyser.fftSize);
+  analyser.getFloatTimeDomainData(buf);
+  const freq = autoCorrelate(buf, audioCtx.sampleRate);
+
+  updateTuner(freq);
+  drawPitch(freq);
+
+  if (freq > 40) {
+    const midi = Math.round(12 * Math.log2(freq / 440) + 69);
+    const note = midiToNote(midi);
+    document.getElementById('live-pitch').textContent = note;
+
+    const now = Date.now();
+    if (note === lastNote && now - lastTime > 180) {
+      const exp = sequence[currentIndex];
+      const correct = note === exp;
+
+      document.getElementById('you-played-live').textContent = note;
+      document.getElementById('you-played-live').style.color = correct ? '#10b981' : '#ef4444';
+
+      if (detected.length <= currentIndex) detected[currentIndex] = note;
+
+      if (correct) {
+        markNote(currentIndex, true);
+        if (learningMode === 'practice') {
+          currentIndex = Math.min(currentIndex + 1, sequence.length - 1);
+          updateLiveExpected();
+          if (currentIndex >= sequence.length - 1) stopSession();
+        }
+      } else if (learningMode === 'performance') {
+        markNote(currentIndex, false);
+      }
+    } else if (note !== lastNote) {
+      lastNote = note;
+      lastTime = now;
+    }
+  } else {
+    document.getElementById('live-pitch').textContent = '—';
+    document.getElementById('you-played-live').textContent = '—';
+  }
+
+  rafId = requestAnimationFrame(listen);
+}
+
+function selectGrade(g) {
+  currentGrade = g;
+  document.querySelectorAll('.grade-btn').forEach((b) => {
+    const t = b.textContent.trim();
+    const num = t === 'Grade 1' ? 1 : parseInt(t, 10);
+    b.dataset.active = (num === g).toString();
+  });
+  renderItems();
+}
+
+function setMode(m) {
+  currentMode = m;
+  document.querySelectorAll('.mode-btn').forEach((b) => {
+    b.dataset.active = (b.id === `mode-${m}`).toString();
+  });
+  renderItems();
+  currentItem = null;
+  document.getElementById('selected-title').textContent = 'Select an exercise';
+  document.getElementById('notes-container').innerHTML = '';
+  updateModeUI();
+}
+
+function setLearningMode(mode) {
+  learningMode = mode;
+  ['learning', 'practice', 'performance'].forEach((m) => {
+    document.getElementById(`${m}-btn`).dataset.active = (m === mode).toString();
+  });
+  document.getElementById('live-feedback').classList.toggle('hidden', mode === 'learning');
+  updateModeUI();
+}
+
+function updateModeUI() {
+  const container = document.getElementById('mode-dependent-btn');
+  container.innerHTML = '';
+  const isLearning = learningMode === 'learning';
+  const btn = document.createElement('button');
+  if (isLearning) {
+    btn.onclick = playSequence;
+    btn.id = 'btn-play';
+    btn.className = 'inline-flex items-center gap-2 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl shadow-lg transition-all disabled:opacity-50';
+    btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg> Play';
+  } else {
+    btn.onclick = toggleSession;
+    btn.id = 'btn-session';
+    btn.className = 'inline-flex items-center gap-2 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl shadow-lg transition-all disabled:opacity-50';
+    btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg> <span>Start</span>';
+  }
+  container.appendChild(btn);
+}
+
+function renderItems() {
+  const cont = document.getElementById('item-list');
+  cont.innerHTML = '';
+  (itemsByGrade[currentGrade] || []).forEach((item) => {
+    const div = document.createElement('div');
+    div.className = `px-4 py-3.5 bg-slate-800/60 hover:bg-slate-700/70 rounded-xl cursor-pointer ${currentItem?.name === item.name ? 'ring-2 ring-emerald-500' : ''}`;
+    div.innerHTML = `<div class="font-medium">${item.name}</div><div class="text-xs text-slate-500">${item.octaves} oct • ${item.type}</div>`;
+    div.onclick = () => loadItem(item);
+    cont.appendChild(div);
+  });
+}
+
+function loadItem(item) {
+  currentItem = item;
+  sequence = item.notes || [];
+  currentIndex = 0;
+
+  const label = currentMode === 'scale' ? 'Scale' : currentMode === 'arpeggio' ? 'Arpeggio' : 'Broken chords';
+  document.getElementById('selected-title').textContent = `${label} – ${item.name}`;
+  document.getElementById('selected-desc').textContent = `${item.octaves} octave${item.octaves > 1 ? 's' : ''} • ${item.type} • Root ${item.root}`;
+
+  const cont = document.getElementById('notes-container');
+  cont.innerHTML = '';
+  sequence.forEach((n, i) => {
+    const p = document.createElement('div');
+    p.className = 'note-pill px-5 py-3 bg-slate-800/70 rounded-lg text-center min-w-[60px] text-base font-medium';
+    p.textContent = n;
+    p.dataset.index = i;
+    cont.appendChild(p);
+  });
+
+  document.getElementById('results-area').classList.add('hidden');
+  updateLiveExpected();
+  updateModeUI();
+}
+
+async function playSequence() {
+  if (!currentItem || isPlaying || learningMode !== 'learning') return;
+  await initAudio();
+  isPlaying = true;
+  const playBtn = document.getElementById('btn-play');
+  if (playBtn) playBtn.disabled = true;
+
+  const pills = document.querySelectorAll('#notes-container > div');
+  const msPerBeat = 60000 / currentTempo;
+  const noteDur = msPerBeat * 0.85;
+
+  for (let i = 0; i < sequence.length; i++) {
+    if (!isPlaying) break;
+    pills.forEach((p, idx) => p.classList.toggle('highlight', idx === i));
+
+    const midi = noteToMidi(sequence[i]);
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const filt = audioCtx.createBiquadFilter();
+
+    osc.type = 'sawtooth';
+    filt.type = 'lowpass';
+    filt.frequency.value = 800;
+    osc.frequency.value = midiToFreq(midi);
+    gain.gain.value = 0.28;
+
+    osc.connect(filt).connect(gain).connect(audioCtx.destination);
+    osc.start();
+    setTimeout(() => {
+      gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.08);
+      osc.stop(audioCtx.currentTime + 0.12);
+    }, noteDur);
+
+    await new Promise((r) => setTimeout(r, msPerBeat));
+  }
+
+  pills.forEach((p) => p.classList.remove('highlight'));
+  isPlaying = false;
+  if (playBtn) playBtn.disabled = false;
+}
+
+async function startSession(resetProgress = true) {
+  await initAudio();
+  sessionRunning = true;
+  sessionPaused = false;
+
+  if (resetProgress) {
+    currentIndex = 0;
+    detected = [];
+    document.querySelectorAll('.note-pill').forEach((p) => p.classList.remove('correct', 'wrong'));
+  }
+
+  const btn = document.getElementById('btn-session');
+  if (btn) btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M10 9v2m4-2v2m7-5a9 9 0 01-9 9 9 9 0 01-9-9 9 9 0 019-9 9 9 0 019 9z"/></svg><span>Pause</span>';
+  document.getElementById('btn-listen')?.classList.add('hidden');
+  document.getElementById('btn-analyze')?.classList.remove('hidden');
+
+  startListening();
+
+  if (learningMode === 'performance') startTempoTimer();
+  updateLiveExpected();
+}
+
+function pauseSession() {
+  sessionRunning = false;
+  if (tempoTimer) clearTimeout(tempoTimer);
+  if (rafId) cancelAnimationFrame(rafId);
+  if (stream) stream.getTracks().forEach((t) => t.stop());
+  analyser = null;
+  rafId = null;
+  stream = null;
+  sessionPaused = true;
+  const btn = document.getElementById('btn-session');
+  if (btn) btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg><span>Resume</span>';
+}
+
+function toggleSession() {
+  if (!currentItem) return alert('Select an exercise first');
+  if (!sessionRunning) startSession(!sessionPaused);
+  else pauseSession();
+}
+
+function startTempoTimer() {
+  const ms = 60000 / currentTempo;
+  tempoTimer = setTimeout(() => {
+    if (!sessionRunning || learningMode !== 'performance') return;
+    currentIndex = Math.min(currentIndex + 1, sequence.length - 1);
+    updateLiveExpected();
+    if (currentIndex < sequence.length - 1) startTempoTimer();
+    else stopSession();
+  }, ms);
+}
+
+function updateLiveExpected() {
+  document.getElementById('expected-live').textContent = sequence[currentIndex] || '—';
+  document.querySelectorAll('.note-pill').forEach((p) => {
+    p.classList.remove('current');
+    if (parseInt(p.dataset.index, 10) === currentIndex) p.classList.add('current');
+  });
+}
+
+function markNote(idx, correct) {
+  const p = document.querySelector(`.note-pill[data-index="${idx}"]`);
+  if (p) p.classList.add(correct ? 'correct' : 'wrong');
+}
+
+async function startListening() {
+  await initAudio();
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: false },
+    });
+    const src = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 1024;
+    src.connect(analyser);
+    rafId = requestAnimationFrame(listen);
+  } catch (e) {
+    alert(`Microphone access failed: ${e.message}`);
+  }
+}
+
+function stopSession() {
+  if (rafId) cancelAnimationFrame(rafId);
+  if (tempoTimer) clearTimeout(tempoTimer);
+  if (stream) stream.getTracks().forEach((t) => t.stop());
+  sessionRunning = false;
+  sessionPaused = false;
+  analyser = null;
+  rafId = null;
+  stream = null;
+  drawPitch(-1);
+  const btn = document.getElementById('btn-session');
+  if (btn) btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg><span>Start Again</span>';
+}
+
+function stopAndAnalyze() {
+  stopSession();
+  const rows = document.getElementById('results-rows');
+  rows.innerHTML = '';
+  let correct = 0;
+  sequence.forEach((exp, i) => {
+    const got = detected[i] || '—';
+    const match = got === exp;
+    if (match) correct++;
+    const row = document.createElement('div');
+    row.className = 'flex justify-between items-center bg-slate-900/50 px-5 py-3.5 rounded-xl';
+    row.innerHTML = `
+      <div class="flex-1"><div class="text-emerald-400 text-xs">EXPECTED</div><div class="text-lg font-medium">${exp}</div></div>
+      <div class="text-center flex-1"><div class="text-orange-400 text-xs">YOU PLAYED</div><div class="text-lg font-medium ${match ? 'text-emerald-400' : 'text-red-400'}">${got}</div></div>
+      <div class="text-2xl">${match ? '✅' : '❌'}</div>`;
+    rows.appendChild(row);
+  });
+  const pct = sequence.length ? Math.round((correct / sequence.length) * 100) : 0;
+  document.getElementById('score-display').textContent = `${pct}%`;
+  document.getElementById('results-area').classList.remove('hidden');
+}
+
+async function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function setupCanvas() {
+  canvas = document.getElementById('pitch-canvas');
+  if (canvas) ctx = canvas.getContext('2d');
+}
+
+function drawPitch(freq) {
+  if (!ctx) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (freq < 40) {
+    ctx.fillStyle = 'rgba(50,50,60,0.4)';
+    ctx.fillRect(0, 40, canvas.width, 20);
+    return;
+  }
+  const midi = Math.round(12 * Math.log2(freq / 440) + 69);
+  const x = ((midi % 12) / 12) * canvas.width + Math.floor(midi / 12) * 8;
+  ctx.fillStyle = '#10b981';
+  ctx.fillRect(0, 35, x, 30);
+  ctx.fillStyle = 'white';
+  ctx.font = 'bold 20px Inter';
+  ctx.textAlign = 'center';
+  ctx.fillText(midiToNote(midi), x, 90);
+}
+
+function init() {
+  setupCanvas();
+  selectGrade(1);
+  setMode('scale');
+  renderItems();
+  setLearningMode('learning');
+
+  document.getElementById('tempo-slider').addEventListener('input', (e) => {
+    currentTempo = parseInt(e.target.value, 10);
+    document.getElementById('tempo-value').textContent = currentTempo;
+  });
+
+  setTimeout(() => {
+    const first = itemsByGrade[1]?.[0];
+    if (first) loadItem(first);
+  }, 400);
+}
+
+Object.assign(window, {
+  selectGrade,
+  setMode,
+  setLearningMode,
+  startListening,
+  stopAndAnalyze,
+  toggleSession,
+});
+
+window.addEventListener('load', init);
