@@ -49,8 +49,9 @@ function updateTuner(freq) {
   const midi = 12 * Math.log2(freq / 440) + 69;
   const nearest = Math.round(midi);
   const cents = 1200 * Math.log2(freq / midiToFreq(nearest));
+  const preferFlats = prefersFlats(sequence[currentIndex]);
 
-  noteEl.textContent = midiToNote(nearest);
+  noteEl.textContent = midiToNote(nearest, preferFlats);
 
   let pos = 50 + cents;
   pos = Math.max(0, Math.min(100, pos));
@@ -390,7 +391,7 @@ function drawPitch(freq) {
   ctx.fillStyle = 'white';
   ctx.font = 'bold 20px Inter';
   ctx.textAlign = 'center';
-  ctx.fillText(midiToNote(midi), x, 90);
+  ctx.fillText(midiToNote(midi, prefersFlats(sequence[currentIndex])), x, 90);
 }
 
 function init() {
