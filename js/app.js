@@ -25,6 +25,16 @@ let tempoTimer = null;
 let canvas;
 let ctx;
 
+function prefersFlats(note) {
+  return typeof note === 'string' && note.includes('b');
+}
+
+function isSamePitch(a, b) {
+  const valid = /^[A-G](#|b)?-?[0-8]$/;
+  if (!valid.test(a || '') || !valid.test(b || '')) return false;
+  return noteToMidi(a) === noteToMidi(b);
+}
+
 function updateTuner(freq) {
   const noteEl = document.getElementById('tuner-note');
   const needle = document.getElementById('tuner-needle');
@@ -62,18 +72,20 @@ function listen() {
 
   if (freq > 40) {
     const midi = Math.round(12 * Math.log2(freq / 440) + 69);
-    const note = midiToNote(midi);
+    const exp = sequence[currentIndex];
+    const preferFlats = prefersFlats(exp);
+    const note = midiToNote(midi, preferFlats);
     document.getElementById('live-pitch').textContent = note;
 
     const now = Date.now();
     if (note === lastNote && now - lastTime > 180) {
-      const exp = sequence[currentIndex];
-      const correct = note === exp;
+      const correct = isSamePitch(note, exp);
+      const displayNote = correct ? exp : note;
 
-      document.getElementById('you-played-live').textContent = note;
+      document.getElementById('you-played-live').textContent = displayNote;
       document.getElementById('you-played-live').style.color = correct ? '#10b981' : '#ef4444';
 
-      if (detected.length <= currentIndex) detected[currentIndex] = note;
+      if (detected.length <= currentIndex) detected[currentIndex] = displayNote;
 
       if (correct) {
         markNote(currentIndex, true);
@@ -339,7 +351,7 @@ function stopAndAnalyze() {
   let correct = 0;
   sequence.forEach((exp, i) => {
     const got = detected[i] || '—';
-    const match = got === exp;
+    const match = isSamePitch(got, exp);
     if (match) correct++;
     const row = document.createElement('div');
     row.className = 'flex justify-between items-center bg-slate-900/50 px-5 py-3.5 rounded-xl';

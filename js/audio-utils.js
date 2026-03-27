@@ -1,4 +1,5 @@
-export const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+export const NOTES_SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+export const NOTES_FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 
 export function noteToMidi(s) {
   try {
@@ -18,10 +19,11 @@ export function noteToMidi(s) {
   }
 }
 
-export function midiToNote(midi) {
+export function midiToNote(midi, preferFlats = false) {
   const octave = Math.floor(midi / 12) - 1;
-  const noteIndex = midi % 12;
-  return NOTES[noteIndex] + octave;
+  const noteIndex = ((midi % 12) + 12) % 12;
+  const table = preferFlats ? NOTES_FLAT : NOTES_SHARP;
+  return table[noteIndex] + octave;
 }
 
 export function midiToFreq(midi) {
