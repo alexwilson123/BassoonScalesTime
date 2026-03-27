@@ -151,8 +151,11 @@ function renderItems() {
   const cont = document.getElementById('item-list');
   cont.innerHTML = '';
 <<<<<<< ours
+<<<<<<< ours
   (itemsByGrade[currentGrade] || []).forEach((item) => {
 =======
+=======
+>>>>>>> theirs
   const modeItems = (itemsByGrade[currentGrade] || []).filter((item) => {
     const categories = item.categories || ['scale'];
     return categories.includes(currentMode);
@@ -167,6 +170,9 @@ function renderItems() {
   }
 
   modeItems.forEach((item) => {
+<<<<<<< ours
+>>>>>>> theirs
+=======
 >>>>>>> theirs
     const div = document.createElement('div');
     div.className = `px-4 py-3.5 bg-slate-800/60 hover:bg-slate-700/70 rounded-xl cursor-pointer ${currentItem?.name === item.name ? 'ring-2 ring-emerald-500' : ''}`;
@@ -314,7 +320,11 @@ async function startListening() {
     });
     const src = audioCtx.createMediaStreamSource(stream);
     analyser = audioCtx.createAnalyser();
+<<<<<<< ours
     analyser.fftSize = 1024;
+=======
+    analyser.fftSize = 4096;
+>>>>>>> theirs
     src.connect(analyser);
     rafId = requestAnimationFrame(listen);
   } catch (e) {

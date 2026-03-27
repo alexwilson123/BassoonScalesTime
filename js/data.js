@@ -5,6 +5,10 @@ export const itemsByGrade = {
       root: 'F2',
       type: 'major',
 <<<<<<< ours
+<<<<<<< ours
+=======
+      categories: ['scale'],
+>>>>>>> theirs
 =======
       categories: ['scale'],
 >>>>>>> theirs
@@ -16,6 +20,10 @@ export const itemsByGrade = {
       root: 'F2',
       type: 'chromatic',
 <<<<<<< ours
+<<<<<<< ours
+=======
+      categories: ['scale'],
+>>>>>>> theirs
 =======
       categories: ['scale'],
 >>>>>>> theirs
@@ -27,6 +35,10 @@ export const itemsByGrade = {
       root: 'F2',
       type: 'major',
 <<<<<<< ours
+<<<<<<< ours
+=======
+      categories: ['arpeggio', 'broken'],
+>>>>>>> theirs
 =======
       categories: ['arpeggio', 'broken'],
 >>>>>>> theirs
