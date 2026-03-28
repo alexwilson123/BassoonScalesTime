@@ -1,4 +1,13 @@
-body { font-family: 'Inter', system-ui, sans-serif; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-image:
+    linear-gradient(to bottom, rgba(2, 6, 23, 0.9), rgba(15, 23, 42, 0.92)),
+    url('https://source.unsplash.com/1920x1080/?bassoon');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
 .glass { background: rgba(30, 41, 59, 0.65); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
 .note-pill { transition: all 0.22s ease; font-variant-numeric: tabular-nums; }
 .note-pill.highlight { transform: scale(1.18); background-color: #10b981 !important; color: white; box-shadow: 0 10px 25px -5px rgba(16,185,129,0.5); }
