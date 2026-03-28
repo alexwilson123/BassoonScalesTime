@@ -21,6 +21,8 @@ let learningMode = 'learning';
 let sessionRunning = false;
 let sessionPaused = false;
 let tempoTimer = null;
+let countInTimer = null;
+let countInActive = false;
 
 let canvas;
 let ctx;
@@ -158,6 +160,7 @@ function updateModeUI() {
     btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg> <span>Start</span>';
   }
   container.appendChild(btn);
+  updateCountInDisplay();
 }
 
 function renderItems() {
@@ -266,7 +269,14 @@ async function startSession(resetProgress = true) {
   document.getElementById('btn-listen')?.classList.add('hidden');
   document.getElementById('btn-analyze')?.classList.remove('hidden');
 
-  startListening();
+  const listeningReady = await startListening();
+  if (!listeningReady) {
+    stopSession();
+    return;
+  }
+
+  if (learningMode === 'performance') await runPerformanceCountIn();
+  if (!sessionRunning) return;
 
   if (learningMode === 'performance') startTempoTimer();
   updateLiveExpected();
@@ -275,12 +285,16 @@ async function startSession(resetProgress = true) {
 function pauseSession() {
   sessionRunning = false;
   if (tempoTimer) clearTimeout(tempoTimer);
+  if (countInTimer) clearTimeout(countInTimer);
   if (rafId) cancelAnimationFrame(rafId);
   if (stream) stream.getTracks().forEach((t) => t.stop());
   analyser = null;
   rafId = null;
   stream = null;
   sessionPaused = true;
+  countInTimer = null;
+  countInActive = false;
+  updateCountInDisplay();
   const btn = document.getElementById('btn-session');
   if (btn) btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg><span>Resume</span>';
 }
@@ -315,6 +329,57 @@ function markNote(idx, correct) {
   if (p) p.classList.add(correct ? 'correct' : 'wrong');
 }
 
+function updateCountInDisplay(beat = null, text = 'Get ready') {
+  const container = document.getElementById('count-in-display');
+  const textEl = document.getElementById('count-in-text');
+  const numberEl = document.getElementById('count-in-number');
+  if (!container || !textEl || !numberEl) return;
+
+  const show = learningMode === 'performance' && (countInActive || beat !== null);
+  container.classList.toggle('hidden', !show);
+  textEl.textContent = text;
+  numberEl.textContent = beat ?? '4';
+}
+
+function playCountInClick(isAccent = false) {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  osc.type = isAccent ? 'triangle' : 'square';
+  osc.frequency.setValueAtTime(isAccent ? 1320 : 980, now);
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(isAccent ? 0.16 : 0.1, now + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.11);
+
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start(now);
+  osc.stop(now + 0.12);
+}
+
+function wait(ms) {
+  return new Promise((resolve) => {
+    countInTimer = setTimeout(resolve, ms);
+  });
+}
+
+async function runPerformanceCountIn() {
+  countInActive = true;
+  const msPerBeat = 60000 / currentTempo;
+
+  for (let beat = 4; beat >= 1; beat--) {
+    if (!sessionRunning) break;
+    updateCountInDisplay(beat, beat === 1 ? 'Start on the next beat' : 'Performance starts soon');
+    playCountInClick(beat === 4);
+    await wait(msPerBeat);
+  }
+
+  countInActive = false;
+  countInTimer = null;
+  updateCountInDisplay();
+}
+
 async function startListening() {
   await initAudio();
   try {
@@ -326,21 +391,27 @@ async function startListening() {
     analyser.fftSize = 4096;
     src.connect(analyser);
     rafId = requestAnimationFrame(listen);
+    return true;
   } catch (e) {
     alert(`Microphone access failed: ${e.message}`);
+    return false;
   }
 }
 
 function stopSession() {
   if (rafId) cancelAnimationFrame(rafId);
   if (tempoTimer) clearTimeout(tempoTimer);
+  if (countInTimer) clearTimeout(countInTimer);
   if (stream) stream.getTracks().forEach((t) => t.stop());
   sessionRunning = false;
   sessionPaused = false;
+  countInTimer = null;
+  countInActive = false;
   analyser = null;
   rafId = null;
   stream = null;
   drawPitch(-1);
+  updateCountInDisplay();
   const btn = document.getElementById('btn-session');
   if (btn) btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg><span>Start Again</span>';
 }
