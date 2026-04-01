@@ -23,6 +23,7 @@ let sessionPaused = false;
 let tempoTimer = null;
 let countInTimer = null;
 let countInActive = false;
+let countInResolve = null;
 
 let canvas;
 let ctx;
@@ -285,15 +286,13 @@ async function startSession(resetProgress = true) {
 function pauseSession() {
   sessionRunning = false;
   if (tempoTimer) clearTimeout(tempoTimer);
-  if (countInTimer) clearTimeout(countInTimer);
+  cancelCountIn();
   if (rafId) cancelAnimationFrame(rafId);
   if (stream) stream.getTracks().forEach((t) => t.stop());
   analyser = null;
   rafId = null;
   stream = null;
   sessionPaused = true;
-  countInTimer = null;
-  countInActive = false;
   updateCountInDisplay();
   const btn = document.getElementById('btn-session');
   if (btn) btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg><span>Resume</span>';
@@ -360,8 +359,20 @@ function playCountInClick(isAccent = false) {
 
 function wait(ms) {
   return new Promise((resolve) => {
+    countInResolve = resolve;
     countInTimer = setTimeout(resolve, ms);
   });
+}
+
+function cancelCountIn() {
+  if (countInTimer) clearTimeout(countInTimer);
+  countInTimer = null;
+  countInActive = false;
+  if (countInResolve) {
+    const resolve = countInResolve;
+    countInResolve = null;
+    resolve();
+  }
 }
 
 async function runPerformanceCountIn() {
@@ -377,6 +388,7 @@ async function runPerformanceCountIn() {
 
   countInActive = false;
   countInTimer = null;
+  countInResolve = null;
   updateCountInDisplay();
 }
 
@@ -401,12 +413,10 @@ async function startListening() {
 function stopSession() {
   if (rafId) cancelAnimationFrame(rafId);
   if (tempoTimer) clearTimeout(tempoTimer);
-  if (countInTimer) clearTimeout(countInTimer);
+  cancelCountIn();
   if (stream) stream.getTracks().forEach((t) => t.stop());
   sessionRunning = false;
   sessionPaused = false;
-  countInTimer = null;
-  countInActive = false;
   analyser = null;
   rafId = null;
   stream = null;
@@ -447,6 +457,32 @@ function setupCanvas() {
   if (canvas) ctx = canvas.getContext('2d');
 }
 
+function setupControls() {
+  document.querySelectorAll('.grade-btn').forEach((button) => {
+    button.addEventListener('click', () => {
+      const text = button.textContent.trim();
+      const grade = text === 'Grade 1' ? 1 : parseInt(text, 10);
+      if (!Number.isNaN(grade)) selectGrade(grade);
+    });
+  });
+
+  const modeMap = {
+    'mode-scale': 'scale',
+    'mode-arpeggio': 'arpeggio',
+    'mode-broken': 'broken',
+  };
+  Object.entries(modeMap).forEach(([id, mode]) => {
+    document.getElementById(id)?.addEventListener('click', () => setMode(mode));
+  });
+
+  ['learning', 'practice', 'performance'].forEach((mode) => {
+    document.getElementById(`${mode}-btn`)?.addEventListener('click', () => setLearningMode(mode));
+  });
+
+  document.getElementById('btn-listen')?.addEventListener('click', startListening);
+  document.getElementById('btn-analyze')?.addEventListener('click', stopAndAnalyze);
+}
+
 function drawPitch(freq) {
   if (!ctx) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -467,6 +503,7 @@ function drawPitch(freq) {
 
 function init() {
   setupCanvas();
+  setupControls();
   selectGrade(1);
   setMode('scale');
   renderItems();
