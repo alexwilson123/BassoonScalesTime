@@ -1,0 +1,54 @@
+Source folder: C:\Users\Sysop\Documents\Bassoon Grade 1-8\Grade 2
+Grade: 2
+
+SCALES
+
+Image: SCALES\C major.png
+Title: C major
+Transcription: C D E F G A B C B A G F E D C
+
+Image: SCALES\F major.png
+Title: F major
+Transcription: F G A Bb C D E F G A Bb A G F E D C Bb A G F
+
+Image: SCALES\A harmonic minor - articulation (ii) not required.png
+Title: A harmonic minor
+Transcription: A B C D E F G# A G# F E D C B A
+
+Image: SCALES\A melodic minor.png
+Title: A melodic minor
+Transcription: A B C D E F# G# A G F E D C B A
+
+CHROMATIC
+
+Image: Chromatic\Chromatic commencing on F.png
+Title: Chromatic commencing on F
+Transcription: F F# G G# A Bb B C C# D D# E F F# G G# A A Ab G Gb F E Eb D Db C B Bb A Ab G Gb F
+
+ARPEGGIOS
+
+Image: ARPEGGIOS\C majoe Arpeggios.png
+Title: C major
+Transcription: C E G C G E C
+
+Image: ARPEGGIOS\A minor Arpeggios.png
+Title: A minor
+Transcription: A C E A E C A
+
+Image: ARPEGGIOS\F major Arpeggios.png
+Title: F major
+Transcription: F A C F A F C A F
+
+BROKEN CHORD
+
+Image: Broken Chord\C major Broken chords.png
+Title: C major
+Transcription: C E G E G C C G E G E C C
+
+Image: Broken Chord\A minor Broken chords.png
+Title: A minor
+Transcription: A C E C E A A E C E C A A
+
+Image: Broken Chord\F major Broken chords.png
+Title: F major
+Transcription: F A C A C F A A F C A C A F F

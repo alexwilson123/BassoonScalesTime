@@ -1,0 +1,82 @@
+Grade 1
+
+	Scales
+
+		F Major
+
+			𝄢   F   G   A   Bb  C   D   E   F   F   E   D   C   Bb  A   G   F
+	CHROMATIC
+
+		Chromatic commencing on F
+
+			𝄢   F   F#  G   G#  A   Bb  B   C   C#  D   D#  E   F   F   E   Eb  D   Db  C   B   Bb  A   Ab  G   Gb  F
+
+	ARPEGGIOS
+
+			𝄢   F   A   C   F   C   A   F
+
+	BROKEN CHORDS
+
+			𝄢   F   C   A   F   A   C   F
+
+
+
+
+Grade: 2
+
+	SCALES
+
+		C major
+
+			𝄢  C D E F G A B C B A G F E D C
+
+		F major
+
+			𝄢 F G A Bb C D E F G A Bb A G F E D C Bb A G F
+
+		A harmonic minor
+
+			𝄢 A B C D E F G# A G# F E D C B A
+
+		A melodic minor
+
+			𝄢 A B C D E F# G# A G F E D C B A
+
+	CHROMATIC
+
+		Chromatic commencing on F
+
+			𝄢 F F# G G# A Bb B C C# D D# E F F# G G# A A Ab G Gb F E Eb D Db C B Bb A Ab G Gb F
+
+
+	ARPEGGIOS
+
+		C major
+
+			𝄢 C E G C G E C
+
+		A minor
+
+			𝄢 A C E A E C A
+
+		F major
+
+			𝄢 F A C F A F C A F
+
+
+	BROKEN CHORDS
+
+		C major
+
+			𝄢 C E G E G C C G E G E C C
+
+		A minor
+
+			𝄢 A C E C E A A E C E C A A
+
+		F major
+
+			𝄢 F A C A C F A A F C A C A F F
+
+
+
