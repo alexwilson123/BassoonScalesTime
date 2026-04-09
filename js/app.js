@@ -194,7 +194,13 @@ function loadItem(item) {
   sequence = item.notes || [];
   currentIndex = 0;
 
-  const label = currentMode === 'scale' ? 'Scale' : currentMode === 'arpeggio' ? 'Arpeggio' : 'Broken chords';
+  const label = currentMode === 'scale'
+    ? 'Scale'
+    : currentMode === 'thirds'
+      ? 'Scale in Thirds'
+      : currentMode === 'arpeggio'
+        ? 'Arpeggio'
+        : 'Broken chords';
   document.getElementById('selected-title').textContent = `${label} – ${item.name}`;
   document.getElementById('selected-desc').textContent = `${item.octaves} octave${item.octaves > 1 ? 's' : ''} • ${item.type} • Root ${item.root}`;
 
@@ -468,6 +474,7 @@ function setupControls() {
 
   const modeMap = {
     'mode-scale': 'scale',
+    'mode-thirds': 'thirds',
     'mode-arpeggio': 'arpeggio',
     'mode-broken': 'broken',
   };
