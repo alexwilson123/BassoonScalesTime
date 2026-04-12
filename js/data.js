@@ -570,11 +570,11 @@ export const itemsByGrade = {
     },
     {
       name: 'Bb Major scale',
-      root: 'Bb2',
+      root: 'Bb1',
       type: 'major',
       categories: ['scale'],
       octaves: 3,
-      notes: ['Bb2', 'C3', 'D3', 'Eb3', 'F3', 'G3', 'A3', 'Bb3', 'C4', 'D4', 'Eb4', 'F4', 'G4', 'A4', 'Bb4', 'C5', 'D5', 'Eb5', 'F5', 'G5', 'A5', 'Bb5', 'A5', 'G5', 'F5', 'Eb5', 'D5', 'C5', 'Bb4', 'A4', 'G4', 'F4', 'Eb4', 'D4', 'C4', 'Bb3', 'A3', 'G3', 'F3', 'Eb3', 'D3', 'C3', 'Bb2'],
+      notes: ['Bb1', 'C2', 'D2', 'Eb2', 'F2', 'G2', 'A2', 'Bb2', 'C3', 'D3', 'Eb3', 'F3', 'G3', 'A3', 'Bb3', 'C4', 'D4', 'Eb4', 'F4', 'G4', 'A4', 'Bb4', 'A4', 'G4', 'F4', 'Eb4', 'D4', 'C4', 'Bb3', 'A3', 'G3', 'F3', 'Eb3', 'D3', 'C3', 'Bb2', 'A2', 'G2', 'F2', 'Eb2', 'D2', 'C2', 'Bb1'],
     },
     {
       name: 'A Major scale in thirds',
@@ -674,11 +674,11 @@ export const itemsByGrade = {
     },
     {
       name: 'Dominant seventh of Eb',
-      root: 'Bb2',
+      root: 'Bb1',
       type: 'dominant seventh',
       categories: ['arpeggio'],
       octaves: 3,
-      notes: ['Bb2', 'D3', 'F3', 'Ab3', 'Bb3', 'D4', 'F4', 'Ab4', 'Bb4', 'D5', 'F5', 'Ab5', 'Bb5', 'Ab5', 'F5', 'D5', 'Bb4', 'Ab4', 'F4', 'D4', 'Bb3', 'Ab3', 'F3', 'D3', 'Bb2'],
+      notes: ['Bb1', 'D2', 'F2', 'Ab2', 'Bb2', 'D3', 'F3', 'Ab3', 'Bb3', 'D4', 'F4', 'Ab4', 'Bb4', 'Ab4', 'F4', 'D4', 'Bb3', 'Ab3', 'F3', 'D3', 'Bb2', 'Ab2', 'F2', 'D2', 'Bb1'],
     },
   ],
 };
