@@ -1,4 +1,5 @@
 export const itemsByGrade = {
+  // Grade 1
   1: [
     {
       name: 'F Major scale',
@@ -25,6 +26,7 @@ export const itemsByGrade = {
       notes: ['F2', 'A2', 'C3', 'F3', 'C3', 'A2', 'F2'],
     },
   ],
+  // Grade 2
   2: [
     {
       name: 'C Major scale',
@@ -115,6 +117,7 @@ export const itemsByGrade = {
       notes: ['F2', 'A2', 'C3', 'A2', 'C3', 'F3', 'A3', 'A3', 'F3', 'C3', 'A2', 'C3', 'A2', 'F2', 'F2'],
     },
   ],
+  // Grade 3
   3: [
     {
       name: 'G Major scale',
@@ -309,6 +312,7 @@ export const itemsByGrade = {
       notes: ['F2', 'A2', 'C3', 'A2', 'C3', 'F3', 'A3', 'A3', 'F3', 'C3', 'A2', 'C3', 'A2', 'F2', 'F2'],
     },
   ],
+  // Grade 4
   4: [
     {
       name: 'D Major scale',
@@ -519,6 +523,7 @@ export const itemsByGrade = {
       notes: ['B2', 'D3', 'F#3', 'D3', 'F#3', 'B3', 'D4', 'D4', 'B3', 'F#3', 'D3', 'F#3', 'D3', 'B2', 'B2'],
     },
   ],
+  // Grade 5
   5: [
     {
       name: 'D harmonic minor scale',
