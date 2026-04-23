@@ -122,6 +122,7 @@ function selectGrade(g) {
     b.dataset.active = (num === g).toString();
   });
   renderItems();
+  loadFirstAvailableItem();
 }
 
 function setMode(m) {
@@ -130,10 +131,7 @@ function setMode(m) {
     b.dataset.active = (b.id === `mode-${m}`).toString();
   });
   renderItems();
-  currentItem = null;
-  document.getElementById('selected-title').textContent = 'Select an exercise';
-  document.getElementById('notes-container').innerHTML = '';
-  updateModeUI();
+  loadFirstAvailableItem();
 }
 
 function setLearningMode(mode) {
@@ -188,6 +186,34 @@ function renderItems() {
     div.onclick = () => loadItem(item);
     cont.appendChild(div);
   });
+}
+
+function getModeItems() {
+  return (itemsByGrade[currentGrade] || []).filter((item) => {
+    const categories = item.categories || ['scale'];
+    return categories.includes(currentMode);
+  });
+}
+
+function clearCurrentItem() {
+  currentItem = null;
+  sequence = [];
+  currentIndex = 0;
+  document.getElementById('selected-title').textContent = 'Select an exercise';
+  document.getElementById('selected-desc').textContent = '';
+  document.getElementById('notes-container').innerHTML = '';
+  document.getElementById('results-area').classList.add('hidden');
+  updateLiveExpected();
+  updateModeUI();
+}
+
+function loadFirstAvailableItem() {
+  const first = getModeItems()[0];
+  if (first) {
+    loadItem(first);
+    return;
+  }
+  clearCurrentItem();
 }
 
 function loadItem(item) {

@@ -527,11 +527,11 @@ export const itemsByGrade = {
   5: [
     {
       name: 'D harmonic minor scale',
-      root: 'D3',
+      root: 'D2',
       type: 'harmonic minor',
       categories: ['scale'],
       octaves: 2,
-      notes: ['D3', 'E3', 'F3', 'G3', 'A3', 'Bb3', 'C#4', 'D4', 'E4', 'F4', 'G4', 'A4', 'Bb4', 'C#5', 'D5', 'C#5', 'Bb4', 'A4', 'G4', 'F4', 'E4', 'D4', 'C#4', 'Bb3', 'A3', 'G3', 'F3', 'E3', 'D3'],
+      notes: ['D2', 'E2', 'F2', 'G2', 'A2', 'Bb2', 'C#3', 'D3', 'E3', 'F3', 'G3', 'A3', 'Bb3', 'C#4', 'D4', 'C#4', 'Bb3', 'A3', 'G3', 'F3', 'E3', 'D3', 'C#3', 'Bb2', 'A2', 'G2', 'F2', 'E2', 'D2'],
     },
     {
       name: 'D melodic minor scale',
