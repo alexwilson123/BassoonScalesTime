@@ -1,5 +1,6 @@
-import { itemsByGrade } from './data.js';
 import { noteToMidi, midiToNote, midiToFreq, autoCorrelate } from './audio-utils.js';
+
+const { itemsByGrade } = await import(`./data.js?v=${window.__APP_VERSION__ || Date.now()}`);
 
 let currentGrade = 1;
 let currentMode = 'scale';

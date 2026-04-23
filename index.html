@@ -163,6 +163,9 @@
     </div>
   </div>
 
-  <script type="module" src="js/app.js"></script>
+  <script type="module">
+    window.__APP_VERSION__ = `${Date.now()}`;
+    await import(`./js/app.js?v=${window.__APP_VERSION__}`);
+  </script>
 </body>
 </html>
