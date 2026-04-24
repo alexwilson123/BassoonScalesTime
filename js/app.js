@@ -19,6 +19,7 @@ let lastNote = null;
 
 let currentTempo = 72;
 let learningMode = 'learning';
+let playbackMode = 'synth';
 let sessionRunning = false;
 let sessionPaused = false;
 let tempoTimer = null;
@@ -28,6 +29,30 @@ let countInResolve = null;
 
 let canvas;
 let ctx;
+
+const sampleTokens = new Set([
+  'A2', 'A3', 'A4',
+  'As1', 'As2', 'As3', 'As4',
+  'B1', 'B2', 'B3', 'B4',
+  'C2', 'C3', 'C4', 'C5',
+  'Cs2', 'Cs3', 'Cs4', 'Cs5',
+  'D2', 'D3', 'D4', 'D5',
+  'Ds2', 'Ds3', 'Ds4', 'Ds5',
+  'E2', 'E3', 'E4', 'E5',
+  'F2', 'F3', 'F4',
+  'Fs2', 'Fs3', 'Fs4',
+  'G2', 'G3', 'G4',
+  'Gs2', 'Gs3', 'Gs4',
+]);
+
+const sampleAudioCache = new Map();
+
+function setPlaybackMode(mode) {
+  playbackMode = mode;
+  ['synth', 'samples'].forEach((name) => {
+    document.getElementById(`playback-${name}-btn`)?.setAttribute('data-active', (name === mode).toString());
+  });
+}
 
 function prefersFlats(note) {
   return typeof note === 'string' && note.includes('b');
@@ -163,6 +188,77 @@ function updateModeUI() {
   updateCountInDisplay();
 }
 
+function getSampleToken(note) {
+  try {
+    const sharpNote = midiToNote(noteToMidi(note), false);
+    return sharpNote.replace('#', 's');
+  } catch {
+    return null;
+  }
+}
+
+function getSampleUrl(note) {
+  const token = getSampleToken(note);
+  if (!token || !sampleTokens.has(token)) return null;
+  return new URL(`../assets/samples/bassoon_${token}_05_forte_normal.mp3`, import.meta.url).href;
+}
+
+function playSynthNote(note, durationMs) {
+  const midi = noteToMidi(note);
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  const filt = audioCtx.createBiquadFilter();
+
+  osc.type = 'sawtooth';
+  filt.type = 'lowpass';
+  filt.frequency.value = 800;
+  osc.frequency.value = midiToFreq(midi);
+  gain.gain.value = 0.28;
+
+  osc.connect(filt).connect(gain).connect(audioCtx.destination);
+  osc.start();
+  setTimeout(() => {
+    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.08);
+    osc.stop(audioCtx.currentTime + 0.12);
+  }, durationMs);
+}
+
+async function playSampleNote(note, durationMs) {
+  const url = getSampleUrl(note);
+  if (!url) {
+    playSynthNote(note, durationMs);
+    return;
+  }
+
+  let baseAudio = sampleAudioCache.get(url);
+  if (!baseAudio) {
+    baseAudio = new Audio(url);
+    baseAudio.preload = 'auto';
+    sampleAudioCache.set(url, baseAudio);
+  }
+
+  const player = new Audio(url);
+  player.volume = 0.95;
+
+  try {
+    await player.play();
+    setTimeout(() => {
+      player.pause();
+      player.currentTime = 0;
+    }, durationMs);
+  } catch {
+    playSynthNote(note, durationMs);
+  }
+}
+
+async function playSequenceNote(note, durationMs) {
+  if (playbackMode === 'samples') {
+    await playSampleNote(note, durationMs);
+    return;
+  }
+  playSynthNote(note, durationMs);
+}
+
 function renderItems() {
   const cont = document.getElementById('item-list');
   cont.innerHTML = '';
@@ -260,24 +356,7 @@ async function playSequence() {
   for (let i = 0; i < sequence.length; i++) {
     if (!isPlaying) break;
     pills.forEach((p, idx) => p.classList.toggle('highlight', idx === i));
-
-    const midi = noteToMidi(sequence[i]);
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    const filt = audioCtx.createBiquadFilter();
-
-    osc.type = 'sawtooth';
-    filt.type = 'lowpass';
-    filt.frequency.value = 800;
-    osc.frequency.value = midiToFreq(midi);
-    gain.gain.value = 0.28;
-
-    osc.connect(filt).connect(gain).connect(audioCtx.destination);
-    osc.start();
-    setTimeout(() => {
-      gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.08);
-      osc.stop(audioCtx.currentTime + 0.12);
-    }, noteDur);
+    await playSequenceNote(sequence[i], noteDur);
 
     await new Promise((r) => setTimeout(r, msPerBeat));
   }
@@ -513,6 +592,10 @@ function setupControls() {
     document.getElementById(`${mode}-btn`)?.addEventListener('click', () => setLearningMode(mode));
   });
 
+  ['synth', 'samples'].forEach((mode) => {
+    document.getElementById(`playback-${mode}-btn`)?.addEventListener('click', () => setPlaybackMode(mode));
+  });
+
   document.getElementById('btn-listen')?.addEventListener('click', startListening);
   document.getElementById('btn-analyze')?.addEventListener('click', stopAndAnalyze);
 }
@@ -541,6 +624,7 @@ function init() {
   selectGrade(1);
   setMode('scale');
   renderItems();
+  setPlaybackMode('synth');
   setLearningMode('learning');
 
   document.getElementById('tempo-slider').addEventListener('input', (e) => {
@@ -557,6 +641,7 @@ function init() {
 Object.assign(window, {
   selectGrade,
   setMode,
+  setPlaybackMode,
   setLearningMode,
   startListening,
   stopAndAnalyze,

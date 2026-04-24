@@ -85,6 +85,15 @@
             <input type="range" id="tempo-slider" min="40" max="160" value="72" step="1" class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500">
           </div>
 
+          <div class="mt-5">
+            <label class="block text-sm font-medium text-slate-300 mb-2">Playback Sound</label>
+            <div class="flex bg-slate-800 rounded-xl p-1 text-sm">
+              <button onclick="setPlaybackMode('synth')" id="playback-synth-btn" class="flex-1 py-3 rounded-lg font-medium transition-all data-[active=true]:bg-emerald-600 data-[active=true]:text-white" data-active="true">Synth</button>
+              <button onclick="setPlaybackMode('samples')" id="playback-samples-btn" class="flex-1 py-3 rounded-lg font-medium transition-all data-[active=true]:bg-emerald-600 data-[active=true]:text-white">Samples</button>
+            </div>
+            <p id="playback-hint" class="mt-2 text-xs text-slate-500">Recorded sample notes are used when available. Missing notes fall back to synth.</p>
+          </div>
+
           <div class="mt-6 flex bg-slate-800 rounded-xl p-1 text-sm">
             <button onclick="setLearningMode('learning')" id="learning-btn" class="flex-1 py-3 rounded-lg font-medium transition-all data-[active=true]:bg-emerald-600 data-[active=true]:text-white" data-active="true">Learning</button>
             <button onclick="setLearningMode('practice')" id="practice-btn" class="flex-1 py-3 rounded-lg font-medium transition-all data-[active=true]:bg-emerald-600 data-[active=true]:text-white">Practice</button>
