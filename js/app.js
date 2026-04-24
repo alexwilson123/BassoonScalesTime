@@ -45,7 +45,13 @@ const sampleTokens = new Set([
   'Gs2', 'Gs3', 'Gs4',
 ]);
 
-const sampleAudioCache = new Map();
+const sampleBufferCache = new Map();
+const sampleTokenMidis = new Map(
+  [...sampleTokens].map((token) => [
+    token,
+    noteToMidi(token.replace('s', '#')),
+  ]),
+);
 
 function setPlaybackMode(mode) {
   playbackMode = mode;
@@ -203,6 +209,46 @@ function getSampleUrl(note) {
   return new URL(`../assets/samples/bassoon_${token}_05_forte_normal.mp3`, import.meta.url).href;
 }
 
+function getClosestSampleToken(note) {
+  const targetMidi = noteToMidi(note);
+  const exactToken = getSampleToken(note);
+  if (exactToken && sampleTokens.has(exactToken)) {
+    return { token: exactToken, playbackRate: 1 };
+  }
+
+  let bestToken = null;
+  let bestDistance = Infinity;
+
+  sampleTokenMidis.forEach((sampleMidi, token) => {
+    const distance = Math.abs(sampleMidi - targetMidi);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestToken = token;
+    }
+  });
+
+  if (!bestToken) return null;
+
+  const sourceMidi = sampleTokenMidis.get(bestToken);
+  return {
+    token: bestToken,
+    playbackRate: 2 ** ((targetMidi - sourceMidi) / 12),
+  };
+}
+
+async function getSampleBuffer(url) {
+  if (!sampleBufferCache.has(url)) {
+    sampleBufferCache.set(url, (async () => {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Failed to load sample: ${url}`);
+      const arrayBuffer = await response.arrayBuffer();
+      return audioCtx.decodeAudioData(arrayBuffer.slice(0));
+    })());
+  }
+
+  return sampleBufferCache.get(url);
+}
+
 function playSynthNote(note, durationMs) {
   const midi = noteToMidi(note);
   const osc = audioCtx.createOscillator();
@@ -224,28 +270,40 @@ function playSynthNote(note, durationMs) {
 }
 
 async function playSampleNote(note, durationMs) {
-  const url = getSampleUrl(note);
-  if (!url) {
+  if (!audioCtx) {
     playSynthNote(note, durationMs);
     return;
   }
 
-  let baseAudio = sampleAudioCache.get(url);
-  if (!baseAudio) {
-    baseAudio = new Audio(url);
-    baseAudio.preload = 'auto';
-    sampleAudioCache.set(url, baseAudio);
+  const sampleMatch = getClosestSampleToken(note);
+  if (!sampleMatch) {
+    playSynthNote(note, durationMs);
+    return;
   }
 
-  const player = new Audio(url);
-  player.volume = 0.95;
+  const url = new URL(`../assets/samples/bassoon_${sampleMatch.token}_05_forte_normal.mp3`, import.meta.url).href;
 
   try {
-    await player.play();
-    setTimeout(() => {
-      player.pause();
-      player.currentTime = 0;
-    }, durationMs);
+    const buffer = await getSampleBuffer(url);
+    const source = audioCtx.createBufferSource();
+    const gain = audioCtx.createGain();
+    const now = audioCtx.currentTime;
+    const attack = 0.01;
+    const release = 0.08;
+    const sustainTime = Math.max(durationMs / 1000 - attack - release, 0.02);
+    const stopTime = now + attack + sustainTime + release;
+
+    source.buffer = buffer;
+    source.playbackRate.setValueAtTime(sampleMatch.playbackRate, now);
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.9, now + attack);
+    gain.gain.setValueAtTime(0.9, now + attack + sustainTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+
+    source.connect(gain).connect(audioCtx.destination);
+    source.start(now);
+    source.stop(stopTime + 0.01);
   } catch {
     playSynthNote(note, durationMs);
   }
