@@ -71,6 +71,24 @@ function syncTempoDisplay() {
   if (valueEl) valueEl.textContent = tempo;
 }
 
+function setTempo(value) {
+  const parsedTempo = parseInt(value, 10);
+  if (Number.isNaN(parsedTempo) || parsedTempo <= 0) return;
+
+  currentTempo = parsedTempo;
+
+  const slider = document.getElementById('tempo-slider');
+  if (slider && slider.value !== String(parsedTempo)) {
+    slider.value = String(parsedTempo);
+  }
+
+  syncTempoDisplay();
+
+  if (sessionRunning && learningMode === 'performance' && !countInActive) {
+    startTempoTimer();
+  }
+}
+
 function setPlaybackMode(mode) {
   playbackMode = mode;
   ['synth', 'samples'].forEach((name) => {
@@ -705,16 +723,11 @@ function init() {
 
   const tempoSlider = document.getElementById('tempo-slider');
   ['input', 'change'].forEach((eventName) => {
-    tempoSlider.addEventListener(eventName, () => {
-      getCurrentTempo();
-      syncTempoDisplay();
-
-      if (sessionRunning && learningMode === 'performance' && !countInActive) {
-        startTempoTimer();
-      }
+    tempoSlider.addEventListener(eventName, (event) => {
+      setTempo(event.target.value);
     });
   });
-  syncTempoDisplay();
+  setTempo(tempoSlider.value);
 
   setTimeout(() => {
     const first = itemsByGrade[1]?.[0];
@@ -725,6 +738,7 @@ function init() {
 Object.assign(window, {
   selectGrade,
   setMode,
+  setTempo,
   setPlaybackMode,
   setLearningMode,
   startListening,

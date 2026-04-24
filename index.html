@@ -82,7 +82,7 @@
 
           <div class="mt-4">
             <label class="block text-sm font-medium text-slate-300 mb-2">Tempo: <span id="tempo-value">72</span> BPM</label>
-            <input type="range" id="tempo-slider" min="40" max="160" value="72" step="1" class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+            <input type="range" id="tempo-slider" min="40" max="160" value="72" step="1" oninput="setTempo(this.value)" onchange="setTempo(this.value)" class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500">
           </div>
 
           <div class="mt-5">
