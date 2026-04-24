@@ -53,6 +53,24 @@ const sampleTokenMidis = new Map(
   ]),
 );
 
+function getCurrentTempo() {
+  const slider = document.getElementById('tempo-slider');
+  if (!slider) return currentTempo;
+
+  const sliderTempo = parseInt(slider.value, 10);
+  if (!Number.isNaN(sliderTempo) && sliderTempo > 0) {
+    currentTempo = sliderTempo;
+  }
+
+  return currentTempo;
+}
+
+function syncTempoDisplay() {
+  const tempo = getCurrentTempo();
+  const valueEl = document.getElementById('tempo-value');
+  if (valueEl) valueEl.textContent = tempo;
+}
+
 function setPlaybackMode(mode) {
   playbackMode = mode;
   ['synth', 'samples'].forEach((name) => {
@@ -412,7 +430,7 @@ async function playSequence() {
   for (let i = 0; i < sequence.length; i++) {
     if (!isPlaying) break;
     pills.forEach((p, idx) => p.classList.toggle('highlight', idx === i));
-    const msPerBeat = 60000 / currentTempo;
+    const msPerBeat = 60000 / getCurrentTempo();
     const noteDur = msPerBeat * 0.85;
     await playSequenceNote(sequence[i], noteDur);
     await new Promise((r) => setTimeout(r, msPerBeat));
@@ -475,7 +493,7 @@ function toggleSession() {
 
 function startTempoTimer() {
   if (tempoTimer) clearTimeout(tempoTimer);
-  const ms = 60000 / currentTempo;
+  const ms = 60000 / getCurrentTempo();
   tempoTimer = setTimeout(() => {
     if (!sessionRunning || learningMode !== 'performance') return;
     currentIndex = Math.min(currentIndex + 1, sequence.length - 1);
@@ -547,10 +565,10 @@ function cancelCountIn() {
 
 async function runPerformanceCountIn() {
   countInActive = true;
-  const msPerBeat = 60000 / currentTempo;
 
   for (let beat = 4; beat >= 1; beat--) {
     if (!sessionRunning) break;
+    const msPerBeat = 60000 / getCurrentTempo();
     updateCountInDisplay(beat, beat === 1 ? 'Start on the next beat' : 'Performance starts soon');
     playCountInClick(beat === 4);
     await wait(msPerBeat);
@@ -685,14 +703,18 @@ function init() {
   setPlaybackMode('synth');
   setLearningMode('learning');
 
-  document.getElementById('tempo-slider').addEventListener('input', (e) => {
-    currentTempo = parseInt(e.target.value, 10);
-    document.getElementById('tempo-value').textContent = currentTempo;
+  const tempoSlider = document.getElementById('tempo-slider');
+  ['input', 'change'].forEach((eventName) => {
+    tempoSlider.addEventListener(eventName, () => {
+      getCurrentTempo();
+      syncTempoDisplay();
 
-    if (sessionRunning && learningMode === 'performance' && !countInActive) {
-      startTempoTimer();
-    }
+      if (sessionRunning && learningMode === 'performance' && !countInActive) {
+        startTempoTimer();
+      }
+    });
   });
+  syncTempoDisplay();
 
   setTimeout(() => {
     const first = itemsByGrade[1]?.[0];
