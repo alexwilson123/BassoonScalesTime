@@ -350,14 +350,13 @@ async function playSequence() {
   if (playBtn) playBtn.disabled = true;
 
   const pills = document.querySelectorAll('#notes-container > div');
-  const msPerBeat = 60000 / currentTempo;
-  const noteDur = msPerBeat * 0.85;
 
   for (let i = 0; i < sequence.length; i++) {
     if (!isPlaying) break;
     pills.forEach((p, idx) => p.classList.toggle('highlight', idx === i));
+    const msPerBeat = 60000 / currentTempo;
+    const noteDur = msPerBeat * 0.85;
     await playSequenceNote(sequence[i], noteDur);
-
     await new Promise((r) => setTimeout(r, msPerBeat));
   }
 
@@ -417,6 +416,7 @@ function toggleSession() {
 }
 
 function startTempoTimer() {
+  if (tempoTimer) clearTimeout(tempoTimer);
   const ms = 60000 / currentTempo;
   tempoTimer = setTimeout(() => {
     if (!sessionRunning || learningMode !== 'performance') return;
@@ -630,6 +630,10 @@ function init() {
   document.getElementById('tempo-slider').addEventListener('input', (e) => {
     currentTempo = parseInt(e.target.value, 10);
     document.getElementById('tempo-value').textContent = currentTempo;
+
+    if (sessionRunning && learningMode === 'performance' && !countInActive) {
+      startTempoTimer();
+    }
   });
 
   setTimeout(() => {
