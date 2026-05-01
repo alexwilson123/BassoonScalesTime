@@ -41,24 +41,37 @@
 
       <!-- Sidebar -->
       <aside class="lg:col-span-4 space-y-4 sm:space-y-6">
-        <div class="glass rounded-2xl p-4 sm:p-5 shadow-xl shadow-black/30">
-          <h3 class="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-slate-300">Exercise Type</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <details class="mobile-accordion glass rounded-2xl p-4 sm:p-5 shadow-xl shadow-black/30" open>
+          <summary class="mobile-accordion-summary text-base sm:text-lg font-semibold text-slate-300">Exercise Type</summary>
+          <div class="mt-3 sm:mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button id="mode-scale" onclick="setMode('scale')" class="mode-btn flex min-h-[64px] sm:min-h-[72px] items-center justify-center rounded-xl px-4 py-4 text-center text-sm font-semibold transition-all data-[active=true]:bg-emerald-600/90 data-[active=true]:text-white data-[active=true]:shadow-md hover:bg-slate-700/70" data-active="true">Scales</button>
             <button id="mode-thirds" onclick="setMode('thirds')" class="mode-btn flex min-h-[64px] sm:min-h-[72px] items-center justify-center rounded-xl px-4 py-4 text-center text-sm font-semibold leading-tight transition-all data-[active=true]:bg-emerald-600/90 data-[active=true]:text-white data-[active=true]:shadow-md hover:bg-slate-700/70">Scales in Thirds</button>
             <button id="mode-arpeggio" onclick="setMode('arpeggio')" class="mode-btn flex min-h-[64px] sm:min-h-[72px] items-center justify-center rounded-xl px-4 py-4 text-center text-sm font-semibold transition-all data-[active=true]:bg-emerald-600/90 data-[active=true]:text-white data-[active=true]:shadow-md hover:bg-slate-700/70">Arpeggios</button>
             <button id="mode-broken" onclick="setMode('broken')" class="mode-btn flex min-h-[64px] sm:min-h-[72px] items-center justify-center rounded-xl px-4 py-4 text-center text-sm font-semibold transition-all data-[active=true]:bg-emerald-600/90 data-[active=true]:text-white data-[active=true]:shadow-md hover:bg-slate-700/70">Broken Chords</button>
           </div>
-        </div>
+        </details>
 
-        <div class="glass rounded-2xl p-4 sm:p-5 shadow-xl shadow-black/30 max-h-[38vh] lg:h-[min(65vh,760px)] lg:max-h-none overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-900/50">
-          <h3 class="text-base sm:text-lg font-semibold mb-4 text-slate-300 sticky top-0 bg-slate-900/80 backdrop-blur-sm py-3 -mx-4 sm:-mx-5 px-4 sm:px-5 z-10">Available Items</h3>
-          <div id="item-list" class="space-y-3"></div>
-        </div>
+        <details class="mobile-accordion glass rounded-2xl p-4 sm:p-5 shadow-xl shadow-black/30" open>
+          <summary class="mobile-accordion-summary text-base sm:text-lg font-semibold text-slate-300">Available Items</summary>
+          <div class="mt-3 sm:mt-4 max-h-[38vh] lg:h-[min(65vh,760px)] lg:max-h-none overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-900/50">
+            <div id="item-list" class="space-y-3"></div>
+          </div>
+        </details>
       </aside>
 
       <!-- Main Content -->
       <main class="lg:col-span-8 space-y-4 sm:space-y-6">
+        <div id="audio-banner" class="hidden glass rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-4 shadow-xl shadow-black/20">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div class="text-sm font-semibold text-amber-300">Tap to enable audio</div>
+              <p class="text-sm text-amber-100/80">iPhone and iPad require a user tap before playback and microphone audio can start.</p>
+            </div>
+            <button id="audio-banner-btn" type="button" class="inline-flex items-center justify-center rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-amber-300">
+              Enable Audio
+            </button>
+          </div>
+        </div>
 
         <!-- Controls -->
         <div class="glass rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/30">
@@ -169,6 +182,23 @@
         </div>
 
       </main>
+    </div>
+  </div>
+
+  <div id="mobile-action-bar" class="mobile-action-bar lg:hidden">
+    <div class="mobile-action-shell glass">
+      <div class="mobile-action-meta">
+        <div id="mobile-action-title" class="text-sm font-semibold text-white">Select an exercise</div>
+        <div id="mobile-action-subtitle" class="text-xs text-slate-400">Choose a grade and exercise to begin</div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <button id="mobile-secondary-btn" type="button" class="hidden min-h-[52px] rounded-xl bg-slate-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-600">
+          Start Mic
+        </button>
+        <button id="mobile-primary-btn" type="button" class="min-h-[52px] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500">
+          Play
+        </button>
+      </div>
     </div>
   </div>
 

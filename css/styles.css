@@ -40,6 +40,40 @@ body::after {
 canvas { image-rendering: pixelated; }
 .tuner-bar { height: 12px; background: linear-gradient(to right, #ef4444, #eab308, #10b981, #eab308, #ef4444); border-radius: 9999px; position: relative; overflow: hidden; }
 .tuner-needle { position: absolute; top: -4px; width: 4px; height: 20px; background: white; box-shadow: 0 0 8px white; transition: left 0.05s linear; }
+.mobile-accordion-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  list-style: none;
+  cursor: pointer;
+}
+.mobile-accordion-summary::-webkit-details-marker { display: none; }
+.mobile-accordion-summary::after {
+  content: "+";
+  font-size: 1.2rem;
+  color: rgba(226, 232, 240, 0.72);
+}
+.mobile-accordion[open] > .mobile-accordion-summary::after { content: "−"; }
+.mobile-action-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  padding: 0 0.75rem calc(env(safe-area-inset-bottom, 0) + 0.75rem);
+  pointer-events: none;
+}
+.mobile-action-shell {
+  max-width: 32rem;
+  margin: 0 auto;
+  padding: 0.85rem;
+  border-radius: 1rem;
+  box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+}
+.mobile-action-meta {
+  margin-bottom: 0.75rem;
+}
 
 @media (max-width: 640px) {
   body {
@@ -92,5 +126,19 @@ canvas { image-rendering: pixelated; }
 
   canvas {
     height: 96px;
+  }
+
+  main {
+    padding-bottom: 7.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-accordion-summary {
+    pointer-events: none;
+  }
+
+  .mobile-accordion-summary::after {
+    display: none;
   }
 }

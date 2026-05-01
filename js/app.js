@@ -28,6 +28,7 @@ let tempoTimer = null;
 let countInTimer = null;
 let countInActive = false;
 let countInResolve = null;
+let mobileSecondaryAction = null;
 
 let canvas;
 let ctx;
@@ -100,6 +101,8 @@ function setPlaybackMode(mode) {
   if (mode === 'samples') {
     preloadCurrentSequenceSamples().catch(() => {});
   }
+
+  updateAudioBanner();
 }
 
 function prefersFlats(note) {
@@ -214,6 +217,7 @@ function setLearningMode(mode) {
   });
   document.getElementById('live-feedback').classList.toggle('hidden', mode === 'learning');
   updateModeUI();
+  updateMobileActionBar();
 }
 
 function updateModeUI() {
@@ -234,6 +238,55 @@ function updateModeUI() {
   }
   container.appendChild(btn);
   updateCountInDisplay();
+  updateMobileActionBar();
+}
+
+function setMobileSecondaryAction(action) {
+  mobileSecondaryAction = action;
+  updateMobileActionBar();
+}
+
+function updateMobileActionBar() {
+  const primaryBtn = document.getElementById('mobile-primary-btn');
+  const secondaryBtn = document.getElementById('mobile-secondary-btn');
+  const titleEl = document.getElementById('mobile-action-title');
+  const subtitleEl = document.getElementById('mobile-action-subtitle');
+  if (!primaryBtn || !secondaryBtn || !titleEl || !subtitleEl) return;
+
+  titleEl.textContent = currentItem?.name || 'Select an exercise';
+  subtitleEl.textContent = currentItem
+    ? `Grade ${currentGrade} • ${learningMode === 'learning' ? 'Learning' : learningMode === 'practice' ? 'Practice' : 'Performance'}`
+    : 'Choose a grade and exercise to begin';
+
+  primaryBtn.disabled = !currentItem;
+  primaryBtn.classList.toggle('opacity-50', !currentItem);
+
+  if (learningMode === 'learning') {
+    primaryBtn.textContent = isPlaying ? 'Playing...' : 'Play';
+  } else if (sessionRunning) {
+    primaryBtn.textContent = 'Pause';
+  } else if (sessionPaused) {
+    primaryBtn.textContent = 'Resume';
+  } else {
+    primaryBtn.textContent = 'Start';
+  }
+
+  const showSecondary = mobileSecondaryAction !== null;
+  secondaryBtn.classList.toggle('hidden', !showSecondary);
+  if (showSecondary) {
+    secondaryBtn.textContent = mobileSecondaryAction?.label || '';
+    secondaryBtn.classList.toggle('bg-orange-600', mobileSecondaryAction?.tone === 'orange');
+    secondaryBtn.classList.toggle('hover:bg-orange-500', mobileSecondaryAction?.tone === 'orange');
+    secondaryBtn.classList.toggle('bg-slate-700', mobileSecondaryAction?.tone !== 'orange');
+    secondaryBtn.classList.toggle('hover:bg-slate-600', mobileSecondaryAction?.tone !== 'orange');
+  }
+}
+
+function updateAudioBanner() {
+  const banner = document.getElementById('audio-banner');
+  if (!banner) return;
+  const shouldShow = !audioUnlocked;
+  banner.classList.toggle('hidden', !shouldShow);
 }
 
 function getSampleToken(note) {
@@ -415,6 +468,7 @@ function clearCurrentItem() {
   document.getElementById('results-area').classList.add('hidden');
   updateLiveExpected();
   updateModeUI();
+  updateMobileActionBar();
 }
 
 function loadFirstAvailableItem() {
@@ -455,6 +509,7 @@ function loadItem(item) {
   updateLiveExpected();
   updateModeUI();
   preloadCurrentSequenceSamples().catch(() => {});
+  updateMobileActionBar();
 }
 
 async function playSequence() {
@@ -465,6 +520,7 @@ async function playSequence() {
   if (playBtn) playBtn.disabled = true;
 
   const pills = document.querySelectorAll('#notes-container > div');
+  updateMobileActionBar();
 
   for (let i = 0; i < sequence.length; i++) {
     if (!isPlaying) break;
@@ -478,6 +534,7 @@ async function playSequence() {
   pills.forEach((p) => p.classList.remove('highlight'));
   isPlaying = false;
   if (playBtn) playBtn.disabled = false;
+  updateMobileActionBar();
 }
 
 async function startSession(resetProgress = true) {
@@ -495,6 +552,7 @@ async function startSession(resetProgress = true) {
   if (btn) btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M10 9v2m4-2v2m7-5a9 9 0 01-9 9 9 9 0 01-9-9 9 9 0 019-9 9 9 0 019 9z"/></svg><span>Pause</span>';
   document.getElementById('btn-listen')?.classList.add('hidden');
   document.getElementById('btn-analyze')?.classList.remove('hidden');
+  setMobileSecondaryAction({ label: 'Stop & Check', tone: 'slate', handler: stopAndAnalyze });
 
   const listeningReady = await startListening();
   if (!listeningReady) {
@@ -507,6 +565,7 @@ async function startSession(resetProgress = true) {
 
   if (learningMode === 'performance') startTempoTimer();
   updateLiveExpected();
+  updateMobileActionBar();
 }
 
 function pauseSession() {
@@ -522,6 +581,7 @@ function pauseSession() {
   updateCountInDisplay();
   const btn = document.getElementById('btn-session');
   if (btn) btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg><span>Resume</span>';
+  updateMobileActionBar();
 }
 
 function toggleSession() {
@@ -654,6 +714,8 @@ function stopSession() {
   updateCountInDisplay();
   const btn = document.getElementById('btn-session');
   if (btn) btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg><span>Start Again</span>';
+  setMobileSecondaryAction(null);
+  updateMobileActionBar();
 }
 
 function stopAndAnalyze() {
@@ -676,6 +738,7 @@ function stopAndAnalyze() {
   const pct = sequence.length ? Math.round((correct / sequence.length) * 100) : 0;
   document.getElementById('score-display').textContent = `${pct}%`;
   document.getElementById('results-area').classList.remove('hidden');
+  updateMobileActionBar();
 }
 
 async function initAudio() {
@@ -709,6 +772,7 @@ async function unlockAudioContext() {
     source.stop(audioCtx.currentTime + 0.01);
 
     audioUnlocked = true;
+    updateAudioBanner();
   })();
 
   try {
@@ -725,6 +789,25 @@ function registerAudioUnlock() {
 
   ['touchstart', 'touchend', 'pointerdown', 'click'].forEach((eventName) => {
     document.addEventListener(eventName, unlock, { passive: true });
+  });
+}
+
+function setupMobileUI() {
+  document.getElementById('audio-banner-btn')?.addEventListener('click', () => {
+    initAudio().catch(() => {});
+  });
+
+  document.getElementById('mobile-primary-btn')?.addEventListener('click', () => {
+    if (!currentItem) return;
+    if (learningMode === 'learning') {
+      playSequence();
+      return;
+    }
+    toggleSession();
+  });
+
+  document.getElementById('mobile-secondary-btn')?.addEventListener('click', () => {
+    mobileSecondaryAction?.handler?.();
   });
 }
 
@@ -785,12 +868,15 @@ function drawPitch(freq) {
 function init() {
   setupCanvas();
   setupControls();
+  setupMobileUI();
   registerAudioUnlock();
   selectGrade(1);
   setMode('scale');
   renderItems();
   setPlaybackMode('synth');
   setLearningMode('learning');
+  updateAudioBanner();
+  updateMobileActionBar();
 
   const tempoSlider = document.getElementById('tempo-slider');
   ['input', 'change'].forEach((eventName) => {
