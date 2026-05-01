@@ -20,6 +20,8 @@ let lastNote = null;
 let currentTempo = 72;
 let learningMode = 'learning';
 let playbackMode = 'synth';
+let audioUnlocked = false;
+let audioUnlockPromise = null;
 let sessionRunning = false;
 let sessionPaused = false;
 let tempoTimer = null;
@@ -94,6 +96,10 @@ function setPlaybackMode(mode) {
   ['synth', 'samples'].forEach((name) => {
     document.getElementById(`playback-${name}-btn`)?.setAttribute('data-active', (name === mode).toString());
   });
+
+  if (mode === 'samples') {
+    preloadCurrentSequenceSamples().catch(() => {});
+  }
 }
 
 function prefersFlats(note) {
@@ -285,6 +291,20 @@ async function getSampleBuffer(url) {
   return sampleBufferCache.get(url);
 }
 
+async function preloadCurrentSequenceSamples() {
+  if (playbackMode !== 'samples' || !sequence.length) return;
+  await initAudio();
+
+  const urls = new Set();
+  sequence.forEach((note) => {
+    const sampleMatch = getClosestSampleToken(note);
+    if (!sampleMatch) return;
+    urls.add(new URL(`../assets/samples/bassoon_${sampleMatch.token}_05_forte_normal.mp3`, import.meta.url).href);
+  });
+
+  await Promise.allSettled([...urls].map((url) => getSampleBuffer(url)));
+}
+
 function playSynthNote(note, durationMs) {
   const midi = noteToMidi(note);
   const osc = audioCtx.createOscillator();
@@ -434,6 +454,7 @@ function loadItem(item) {
   document.getElementById('results-area').classList.add('hidden');
   updateLiveExpected();
   updateModeUI();
+  preloadCurrentSequenceSamples().catch(() => {});
 }
 
 async function playSequence() {
@@ -601,6 +622,9 @@ async function runPerformanceCountIn() {
 async function startListening() {
   await initAudio();
   try {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error('Microphone access is not available in this browser.');
+    }
     stream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: false, noiseSuppression: false },
     });
@@ -656,6 +680,52 @@ function stopAndAnalyze() {
 
 async function initAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted') {
+    await audioCtx.resume();
+  }
+  if (!audioUnlocked) {
+    await unlockAudioContext();
+  }
+}
+
+async function unlockAudioContext() {
+  if (audioUnlocked) return;
+  if (audioUnlockPromise) return audioUnlockPromise;
+
+  audioUnlockPromise = (async () => {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted') {
+      await audioCtx.resume();
+    }
+
+    const buffer = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+    const source = audioCtx.createBufferSource();
+    const gain = audioCtx.createGain();
+
+    source.buffer = buffer;
+    gain.gain.value = 0.0001;
+    source.connect(gain).connect(audioCtx.destination);
+    source.start(0);
+    source.stop(audioCtx.currentTime + 0.01);
+
+    audioUnlocked = true;
+  })();
+
+  try {
+    await audioUnlockPromise;
+  } finally {
+    audioUnlockPromise = null;
+  }
+}
+
+function registerAudioUnlock() {
+  const unlock = () => {
+    initAudio().catch(() => {});
+  };
+
+  ['touchstart', 'touchend', 'pointerdown', 'click'].forEach((eventName) => {
+    document.addEventListener(eventName, unlock, { passive: true });
+  });
 }
 
 function setupCanvas() {
@@ -715,6 +785,7 @@ function drawPitch(freq) {
 function init() {
   setupCanvas();
   setupControls();
+  registerAudioUnlock();
   selectGrade(1);
   setMode('scale');
   renderItems();

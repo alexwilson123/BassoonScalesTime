@@ -2,6 +2,8 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
   position: relative;
   background: linear-gradient(to bottom, rgb(2, 6, 23), rgb(15, 23, 42));
+  min-height: 100svh;
+  padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
 body::before {
@@ -38,3 +40,57 @@ body::after {
 canvas { image-rendering: pixelated; }
 .tuner-bar { height: 12px; background: linear-gradient(to right, #ef4444, #eab308, #10b981, #eab308, #ef4444); border-radius: 9999px; position: relative; overflow: hidden; }
 .tuner-needle { position: absolute; top: -4px; width: 4px; height: 20px; background: white; box-shadow: 0 0 8px white; transition: left 0.05s linear; }
+
+@media (max-width: 640px) {
+  body {
+    padding-left: env(safe-area-inset-left, 0);
+    padding-right: env(safe-area-inset-right, 0);
+  }
+
+  header p,
+  #selected-desc,
+  #playback-hint {
+    font-size: 0.9rem;
+  }
+
+  .grade-btn {
+    padding: 0.75rem 1rem;
+  }
+
+  .glass {
+    backdrop-filter: blur(10px);
+  }
+
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .note-pill {
+    min-width: 52px;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.95rem;
+  }
+
+  .note-pill.highlight {
+    transform: scale(1.08);
+  }
+
+  .count-in-number {
+    font-size: 2.5rem;
+  }
+
+  #expected-live,
+  #you-played-live,
+  #tuner-note {
+    font-size: 2rem;
+    line-height: 1.1;
+  }
+
+  #score-display {
+    font-size: 3rem;
+  }
+
+  canvas {
+    height: 96px;
+  }
+}
