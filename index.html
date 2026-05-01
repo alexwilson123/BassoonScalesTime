@@ -164,10 +164,6 @@
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
               Start Mic
             </button>
-            <button id="btn-analyze" onclick="stopAndAnalyze()" class="hidden inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-4 sm:py-5 bg-slate-700 hover:bg-slate-600 active:bg-slate-800 text-white font-semibold rounded-xl shadow-lg transition-all">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
-              Stop & Check
-            </button>
           </div>
         </div>
 
@@ -191,11 +187,8 @@
         <div id="mobile-action-title" class="text-sm font-semibold text-white">Select an exercise</div>
         <div id="mobile-action-subtitle" class="text-xs text-slate-400">Choose a grade and exercise to begin</div>
       </div>
-      <div class="grid grid-cols-2 gap-3">
-        <button id="mobile-secondary-btn" type="button" class="hidden min-h-[52px] rounded-xl bg-slate-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-600">
-          Start Mic
-        </button>
-        <button id="mobile-primary-btn" type="button" class="min-h-[52px] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500">
+      <div class="grid grid-cols-1 gap-3">
+        <button id="mobile-primary-btn" type="button" onclick="handleMobilePrimaryAction(event)" ontouchend="handleMobilePrimaryAction(event)" class="min-h-[52px] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500">
           Play
         </button>
       </div>

@@ -28,7 +28,7 @@ let tempoTimer = null;
 let countInTimer = null;
 let countInActive = false;
 let countInResolve = null;
-let mobileSecondaryAction = null;
+let lastMobileActionAt = 0;
 
 let canvas;
 let ctx;
@@ -107,6 +107,14 @@ function setPlaybackMode(mode) {
 
 function canUseSecureMediaApis() {
   return window.isSecureContext || ['localhost', '127.0.0.1'].includes(window.location.hostname);
+}
+
+function isAppleMobileDevice() {
+  const ua = navigator.userAgent || '';
+  const platform = navigator.platform || '';
+  const touchPoints = navigator.maxTouchPoints || 0;
+  return /iPhone|iPad|iPod/i.test(ua)
+    || (/Mac/i.test(platform) && touchPoints > 1);
 }
 
 function prefersFlats(note) {
@@ -245,17 +253,11 @@ function updateModeUI() {
   updateMobileActionBar();
 }
 
-function setMobileSecondaryAction(action) {
-  mobileSecondaryAction = action;
-  updateMobileActionBar();
-}
-
 function updateMobileActionBar() {
   const primaryBtn = document.getElementById('mobile-primary-btn');
-  const secondaryBtn = document.getElementById('mobile-secondary-btn');
   const titleEl = document.getElementById('mobile-action-title');
   const subtitleEl = document.getElementById('mobile-action-subtitle');
-  if (!primaryBtn || !secondaryBtn || !titleEl || !subtitleEl) return;
+  if (!primaryBtn || !titleEl || !subtitleEl) return;
 
   titleEl.textContent = currentItem?.name || 'Select an exercise';
   subtitleEl.textContent = currentItem
@@ -275,15 +277,6 @@ function updateMobileActionBar() {
     primaryBtn.textContent = 'Start';
   }
 
-  const showSecondary = mobileSecondaryAction !== null;
-  secondaryBtn.classList.toggle('hidden', !showSecondary);
-  if (showSecondary) {
-    secondaryBtn.textContent = mobileSecondaryAction?.label || '';
-    secondaryBtn.classList.toggle('bg-orange-600', mobileSecondaryAction?.tone === 'orange');
-    secondaryBtn.classList.toggle('hover:bg-orange-500', mobileSecondaryAction?.tone === 'orange');
-    secondaryBtn.classList.toggle('bg-slate-700', mobileSecondaryAction?.tone !== 'orange');
-    secondaryBtn.classList.toggle('hover:bg-slate-600', mobileSecondaryAction?.tone !== 'orange');
-  }
 }
 
 function updateAudioBanner() {
@@ -308,6 +301,17 @@ function updateAudioBanner() {
   }
 
   banner.classList.toggle('hidden', !shouldShow);
+}
+
+function shouldIgnoreDuplicateMobileEvent(event) {
+  if (event?.type !== 'touchend') return false;
+  const now = Date.now();
+  lastMobileActionAt = now;
+  return false;
+}
+
+function isSyntheticFollowupClick() {
+  return Date.now() - lastMobileActionAt < 750;
 }
 
 function getSampleToken(note) {
@@ -562,6 +566,7 @@ async function startSession(resetProgress = true) {
   await initAudio();
   sessionRunning = true;
   sessionPaused = false;
+  const delayMicUntilAfterPlayback = isAppleMobileDevice();
 
   if (resetProgress) {
     currentIndex = 0;
@@ -572,17 +577,28 @@ async function startSession(resetProgress = true) {
   const btn = document.getElementById('btn-session');
   if (btn) btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M10 9v2m4-2v2m7-5a9 9 0 01-9 9 9 9 0 01-9-9 9 9 0 019-9 9 9 0 019 9z"/></svg><span>Pause</span>';
   document.getElementById('btn-listen')?.classList.add('hidden');
-  document.getElementById('btn-analyze')?.classList.remove('hidden');
-  setMobileSecondaryAction({ label: 'Stop & Check', tone: 'slate', handler: stopAndAnalyze });
+  updateMobileActionBar();
 
-  const listeningReady = await startListening();
-  if (!listeningReady) {
-    stopSession();
-    return;
+  if (!delayMicUntilAfterPlayback) {
+    const listeningReady = await startListening();
+    if (!listeningReady) {
+      stopSession();
+      return;
+    }
   }
 
-  if (learningMode === 'performance') await runPerformanceCountIn();
+  if (learningMode === 'performance') {
+    await runPerformanceCountIn();
+  }
   if (!sessionRunning) return;
+
+  if (delayMicUntilAfterPlayback) {
+    const listeningReady = await startListening();
+    if (!listeningReady) {
+      stopSession();
+      return;
+    }
+  }
 
   if (learningMode === 'performance') startTempoTimer();
   updateLiveExpected();
@@ -735,7 +751,6 @@ function stopSession() {
   updateCountInDisplay();
   const btn = document.getElementById('btn-session');
   if (btn) btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg><span>Start Again</span>';
-  setMobileSecondaryAction(null);
   updateMobileActionBar();
 }
 
@@ -847,7 +862,10 @@ function setupMobileUI() {
     initAudio().catch(() => {});
   });
 
-  const runPrimaryAction = () => {
+  const runPrimaryAction = (event = null) => {
+    if (event?.type === 'click' && isSyntheticFollowupClick()) return;
+    if (shouldIgnoreDuplicateMobileEvent(event)) return;
+    event?.preventDefault?.();
     directUnlockAudio();
     if (!currentItem) return;
 
@@ -868,28 +886,7 @@ function setupMobileUI() {
     toggleSession();
   };
 
-  const runSecondaryAction = () => {
-    directUnlockAudio();
-
-    if (mobileSecondaryAction?.handler === stopAndAnalyze) {
-      document.getElementById('btn-analyze')?.click();
-      return;
-    }
-
-    mobileSecondaryAction?.handler?.();
-  };
-
-  document.getElementById('mobile-primary-btn')?.addEventListener('click', runPrimaryAction);
-  document.getElementById('mobile-primary-btn')?.addEventListener('touchend', (event) => {
-    event.preventDefault();
-    runPrimaryAction();
-  }, { passive: false });
-
-  document.getElementById('mobile-secondary-btn')?.addEventListener('click', runSecondaryAction);
-  document.getElementById('mobile-secondary-btn')?.addEventListener('touchend', (event) => {
-    event.preventDefault();
-    runSecondaryAction();
-  }, { passive: false });
+  window.handleMobilePrimaryAction = runPrimaryAction;
 }
 
 function setupCanvas() {
@@ -925,7 +922,6 @@ function setupControls() {
   });
 
   document.getElementById('btn-listen')?.addEventListener('click', startListening);
-  document.getElementById('btn-analyze')?.addEventListener('click', stopAndAnalyze);
   document.getElementById('mode-dependent-btn')?.addEventListener('click', () => {
     directUnlockAudio();
   });
@@ -982,6 +978,7 @@ Object.assign(window, {
   setTempo,
   setPlaybackMode,
   setLearningMode,
+  handleMobilePrimaryAction: () => {},
   startListening,
   stopAndAnalyze,
   toggleSession,
