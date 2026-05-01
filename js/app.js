@@ -105,6 +105,10 @@ function setPlaybackMode(mode) {
   updateAudioBanner();
 }
 
+function canUseSecureMediaApis() {
+  return window.isSecureContext || ['localhost', '127.0.0.1'].includes(window.location.hostname);
+}
+
 function prefersFlats(note) {
   return typeof note === 'string' && note.includes('b');
 }
@@ -284,8 +288,25 @@ function updateMobileActionBar() {
 
 function updateAudioBanner() {
   const banner = document.getElementById('audio-banner');
+  const titleEl = banner?.querySelector('.audio-banner-title');
+  const textEl = banner?.querySelector('.audio-banner-text');
+  const buttonEl = document.getElementById('audio-banner-btn');
   if (!banner) return;
-  const shouldShow = !audioUnlocked;
+  const secureMediaReady = canUseSecureMediaApis();
+  const shouldShow = !audioUnlocked || !secureMediaReady;
+
+  if (titleEl && textEl && buttonEl) {
+    if (!secureMediaReady) {
+      titleEl.textContent = 'Open from HTTPS or localhost';
+      textEl.textContent = 'iPhone Safari blocks reliable audio and microphone access on insecure pages or local file URLs.';
+      buttonEl.textContent = 'Try Audio Unlock';
+    } else {
+      titleEl.textContent = 'Tap to enable audio';
+      textEl.textContent = 'iPhone and iPad require a user tap before playback and microphone audio can start.';
+      buttonEl.textContent = 'Enable Audio';
+    }
+  }
+
   banner.classList.toggle('hidden', !shouldShow);
 }
 
@@ -751,6 +772,33 @@ async function initAudio() {
   }
 }
 
+function directUnlockAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+
+  if (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted') {
+    audioCtx.resume().catch(() => {});
+  }
+
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  const now = audioCtx.currentTime;
+
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(880, now);
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.03);
+
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start(now);
+  osc.stop(now + 0.04);
+
+  audioUnlocked = true;
+  updateAudioBanner();
+}
+
 async function unlockAudioContext() {
   if (audioUnlocked) return;
   if (audioUnlockPromise) return audioUnlockPromise;
@@ -784,6 +832,7 @@ async function unlockAudioContext() {
 
 function registerAudioUnlock() {
   const unlock = () => {
+    directUnlockAudio();
     initAudio().catch(() => {});
   };
 
@@ -794,21 +843,53 @@ function registerAudioUnlock() {
 
 function setupMobileUI() {
   document.getElementById('audio-banner-btn')?.addEventListener('click', () => {
+    directUnlockAudio();
     initAudio().catch(() => {});
   });
 
-  document.getElementById('mobile-primary-btn')?.addEventListener('click', () => {
+  const runPrimaryAction = () => {
+    directUnlockAudio();
     if (!currentItem) return;
+
+    const desktopPrimaryButton = learningMode === 'learning'
+      ? document.getElementById('btn-play')
+      : document.getElementById('btn-session');
+
+    if (desktopPrimaryButton) {
+      desktopPrimaryButton.click();
+      return;
+    }
+
     if (learningMode === 'learning') {
       playSequence();
       return;
     }
-    toggleSession();
-  });
 
-  document.getElementById('mobile-secondary-btn')?.addEventListener('click', () => {
+    toggleSession();
+  };
+
+  const runSecondaryAction = () => {
+    directUnlockAudio();
+
+    if (mobileSecondaryAction?.handler === stopAndAnalyze) {
+      document.getElementById('btn-analyze')?.click();
+      return;
+    }
+
     mobileSecondaryAction?.handler?.();
-  });
+  };
+
+  document.getElementById('mobile-primary-btn')?.addEventListener('click', runPrimaryAction);
+  document.getElementById('mobile-primary-btn')?.addEventListener('touchend', (event) => {
+    event.preventDefault();
+    runPrimaryAction();
+  }, { passive: false });
+
+  document.getElementById('mobile-secondary-btn')?.addEventListener('click', runSecondaryAction);
+  document.getElementById('mobile-secondary-btn')?.addEventListener('touchend', (event) => {
+    event.preventDefault();
+    runSecondaryAction();
+  }, { passive: false });
 }
 
 function setupCanvas() {
@@ -845,6 +926,9 @@ function setupControls() {
 
   document.getElementById('btn-listen')?.addEventListener('click', startListening);
   document.getElementById('btn-analyze')?.addEventListener('click', stopAndAnalyze);
+  document.getElementById('mode-dependent-btn')?.addEventListener('click', () => {
+    directUnlockAudio();
+  });
 }
 
 function drawPitch(freq) {
