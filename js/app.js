@@ -490,7 +490,6 @@ function clearCurrentItem() {
   document.getElementById('selected-title').textContent = 'Select an exercise';
   document.getElementById('selected-desc').textContent = '';
   document.getElementById('notes-container').innerHTML = '';
-  document.getElementById('results-area').classList.add('hidden');
   updateLiveExpected();
   updateModeUI();
   updateMobileActionBar();
@@ -530,7 +529,6 @@ function loadItem(item) {
     cont.appendChild(p);
   });
 
-  document.getElementById('results-area').classList.add('hidden');
   updateLiveExpected();
   updateModeUI();
   preloadCurrentSequenceSamples().catch(() => {});
@@ -756,24 +754,6 @@ function stopSession() {
 
 function stopAndAnalyze() {
   stopSession();
-  const rows = document.getElementById('results-rows');
-  rows.innerHTML = '';
-  let correct = 0;
-  sequence.forEach((exp, i) => {
-    const got = detected[i] || '—';
-    const match = isSamePitch(got, exp);
-    if (match) correct++;
-    const row = document.createElement('div');
-    row.className = 'flex justify-between items-center bg-slate-900/50 px-5 py-3.5 rounded-xl';
-    row.innerHTML = `
-      <div class="flex-1"><div class="text-emerald-400 text-xs">EXPECTED</div><div class="text-lg font-medium">${exp}</div></div>
-      <div class="text-center flex-1"><div class="text-orange-400 text-xs">YOU PLAYED</div><div class="text-lg font-medium ${match ? 'text-emerald-400' : 'text-red-400'}">${got}</div></div>
-      <div class="text-2xl">${match ? '✅' : '❌'}</div>`;
-    rows.appendChild(row);
-  });
-  const pct = sequence.length ? Math.round((correct / sequence.length) * 100) : 0;
-  document.getElementById('score-display').textContent = `${pct}%`;
-  document.getElementById('results-area').classList.remove('hidden');
   updateMobileActionBar();
 }
 
