@@ -20,7 +20,7 @@
         </h1>
         <p class="mt-2 text-slate-400 text-lg">Scales • Arpeggios • Broken Chords • ABRSM 2022–2026</p>
       </div>
-      <div class="text-sm text-slate-500">v2.7 • Session & Visualizer Fixes</div>
+      <div class="text-sm text-slate-500">v2.7 • Session Fixes</div>
     </header>
 
     <!-- Grade Tabs -->
@@ -146,25 +146,6 @@
         <!-- Notes -->
         <div class="glass rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/30">
           <div id="notes-container" class="flex flex-wrap gap-2 sm:gap-3 min-h-[88px] sm:min-h-[100px]"></div>
-        </div>
-
-        <!-- Visualizer + Controls -->
-        <div class="glass rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/30 space-y-5 sm:space-y-6">
-          <div>
-            <canvas id="pitch-canvas" width="800" height="100" class="w-full rounded-xl bg-slate-950/70"></canvas>
-            <div class="flex justify-between text-xs text-slate-500 mt-3 px-1">
-              <span>Low</span>
-              <span class="font-medium">Note: <span id="live-pitch" class="text-emerald-400">--</span></span>
-              <span>High</span>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <button id="btn-listen" onclick="startListening()" class="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-4 sm:py-5 bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-semibold rounded-xl shadow-lg shadow-orange-900/30 transition-all hidden">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-              Start Mic
-            </button>
-          </div>
         </div>
 
       </main>

@@ -30,9 +30,6 @@ let countInActive = false;
 let countInResolve = null;
 let lastMobileActionAt = 0;
 
-let canvas;
-let ctx;
-
 const sampleTokens = new Set([
   'A2', 'A3', 'A4',
   'As1', 'As2', 'As3', 'As4',
@@ -161,15 +158,11 @@ function listen() {
   const freq = autoCorrelate(buf, audioCtx.sampleRate);
 
   updateTuner(freq);
-  drawPitch(freq);
-
   if (freq > 40) {
     const midi = Math.round(12 * Math.log2(freq / 440) + 69);
     const exp = sequence[currentIndex];
     const preferFlats = prefersFlats(exp);
     const note = midiToNote(midi, preferFlats);
-    document.getElementById('live-pitch').textContent = note;
-
     const now = Date.now();
     if (note === lastNote && now - lastTime > 180) {
       const correct = isSamePitch(note, exp);
@@ -195,7 +188,6 @@ function listen() {
       lastTime = now;
     }
   } else {
-    document.getElementById('live-pitch').textContent = '—';
     document.getElementById('you-played-live').textContent = '—';
   }
 
@@ -574,7 +566,6 @@ async function startSession(resetProgress = true) {
 
   const btn = document.getElementById('btn-session');
   if (btn) btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M10 9v2m4-2v2m7-5a9 9 0 01-9 9 9 9 0 01-9-9 9 9 0 019-9 9 9 0 019 9z"/></svg><span>Pause</span>';
-  document.getElementById('btn-listen')?.classList.add('hidden');
   updateMobileActionBar();
 
   if (!delayMicUntilAfterPlayback) {
@@ -745,7 +736,6 @@ function stopSession() {
   analyser = null;
   rafId = null;
   stream = null;
-  drawPitch(-1);
   updateCountInDisplay();
   const btn = document.getElementById('btn-session');
   if (btn) btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg><span>Start Again</span>';
@@ -869,11 +859,6 @@ function setupMobileUI() {
   window.handleMobilePrimaryAction = runPrimaryAction;
 }
 
-function setupCanvas() {
-  canvas = document.getElementById('pitch-canvas');
-  if (canvas) ctx = canvas.getContext('2d');
-}
-
 function setupControls() {
   document.querySelectorAll('.grade-btn').forEach((button) => {
     button.addEventListener('click', () => {
@@ -901,32 +886,12 @@ function setupControls() {
     document.getElementById(`playback-${mode}-btn`)?.addEventListener('click', () => setPlaybackMode(mode));
   });
 
-  document.getElementById('btn-listen')?.addEventListener('click', startListening);
   document.getElementById('mode-dependent-btn')?.addEventListener('click', () => {
     directUnlockAudio();
   });
 }
 
-function drawPitch(freq) {
-  if (!ctx) return;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (freq < 40) {
-    ctx.fillStyle = 'rgba(50,50,60,0.4)';
-    ctx.fillRect(0, 40, canvas.width, 20);
-    return;
-  }
-  const midi = Math.round(12 * Math.log2(freq / 440) + 69);
-  const x = ((midi % 12) / 12) * canvas.width + Math.floor(midi / 12) * 8;
-  ctx.fillStyle = '#10b981';
-  ctx.fillRect(0, 35, x, 30);
-  ctx.fillStyle = 'white';
-  ctx.font = 'bold 20px Inter';
-  ctx.textAlign = 'center';
-  ctx.fillText(midiToNote(midi, prefersFlats(sequence[currentIndex])), x, 90);
-}
-
 function init() {
-  setupCanvas();
   setupControls();
   setupMobileUI();
   registerAudioUnlock();
